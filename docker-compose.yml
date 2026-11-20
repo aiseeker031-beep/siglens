@@ -1,0 +1,16 @@
+services:
+  cryptolens:
+    build: .
+    container_name: cryptolens
+    ports:
+      - "3000:3000"
+    environment:
+      - NODE_ENV=production
+      - PORT=3000
+      - ALLOW_LOCAL_OLLAMA=false
+    volumes:
+      - cryptolens_data:/app/data
+    restart: unless-stopped
+
+volumes:
+  cryptolens_data:

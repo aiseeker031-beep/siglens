@@ -1,0 +1,85 @@
+@import "tailwindcss";
+@custom-variant dark (&:where(.dark, .dark *));
+
+@layer base {
+  :root {
+    --bg-canvas: #F7F9FB;
+    --bg-sidebar: #FFFFFF;
+    --bg-card: #FFFFFF;
+    --bg-elevated: #F1F5F9;
+    --text-primary: #17212B;
+    --text-secondary: #677482;
+    --border-subtle: #E6EBF0;
+    --accent: #6B9F30;
+    --bullish: #16A378;
+    --bearish: #DC4C54;
+    --neutral: #64748B;
+  }
+
+  .dark {
+    --bg-canvas: #0B0F14;
+    --bg-sidebar: #10151C;
+    --bg-card: #151B23;
+    --bg-elevated: #1B232D;
+    --text-primary: #F4F7FA;
+    --text-secondary: #8B97A5;
+    --border-subtle: #27313C;
+    --accent: #B6F36A;
+    --bullish: #35C89A;
+    --bearish: #F16B72;
+    --neutral: #94A3B8;
+  }
+
+  html {
+    font-family: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, sans-serif;
+    font-feature-settings: "cv02", "cv03", "cv04", "cv11";
+  }
+
+  .font-mono,
+  code,
+  pre {
+    font-family: 'IBM Plex Mono', ui-monospace, SFMono-Regular, Menlo, monospace;
+    font-variant-numeric: tabular-nums;
+  }
+
+  .tabular-nums {
+    font-variant-numeric: tabular-nums;
+  }
+}
+
+/* Subtle scrollbar for institutional terminal feel */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+  background: rgba(139, 151, 165, 0.25);
+  border-radius: 3px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: rgba(139, 151, 165, 0.45);
+}
+
+@keyframes flash-up {
+  0% { background-color: rgba(53, 200, 154, 0.22); }
+  100% { background-color: transparent; }
+}
+
+@keyframes flash-down {
+  0% { background-color: rgba(241, 107, 114, 0.22); }
+  100% { background-color: transparent; }
+}
+
+.animate-flash-up {
+  animation: flash-up 0.65s ease-out;
+}
+
+.animate-flash-down {
+  animation: flash-down 0.65s ease-out;
+}

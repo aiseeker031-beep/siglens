@@ -1,0 +1,8 @@
+{
+  "name": "CRYPTOLENS",
+  "description": "Real-time cryptocurrency intelligence, multidimensional market visualization, and explainable technical signals.",
+  "requestFramePermissions": [],
+  "majorCapabilities": [
+    "MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"
+  ]
+}

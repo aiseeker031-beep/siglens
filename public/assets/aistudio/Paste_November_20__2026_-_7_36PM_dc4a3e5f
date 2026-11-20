@@ -1,0 +1,2795 @@
+# MASTER BUILD PROMPT — CRYPTOLENS
+
+## ROLE & MISSION
+
+You are Codex, acting as an elite full-stack engineer, quantitative market analyst, financial-data architect, WebGL developer, and award-winning SaaS UI/UX designer.
+
+Build **CRYPTOLENS**, a complete, production-quality, open-source cryptocurrency analytics platform.
+
+The application must combine the analytical depth of altFINS, the charting experience of TradingView, and the visual sophistication of a premium financial research terminal.
+
+**Reference platform:** https://altfins.com/
+
+Study its available public features, research workflows, market screener, technical analysis, indicators, chart patterns, signals, trend scores, and coin research tools.
+
+Use these as functional inspiration, but create an entirely original application, visual identity, interface, and implementation.
+
+**IMPORTANT: THIS IS STRICTLY AN ANALYTICS PLATFORM, NOT A TRADING PLATFORM.**
+
+There must be:
+
+- No trading functionality.
+- No order execution.
+- No exchange-account connections.
+- No private exchange API keys.
+- No exchange balance synchronization.
+- No deposits, withdrawals, or wallet connections.
+- No brokerage integration.
+- No copy trading.
+- No paper-trading engine.
+- No buy/sell order forms.
+
+The application exists exclusively to collect cryptocurrency market data, analyze conditions, visualize trends, discover patterns, and generate transparent analytical signals.
+
+Every core feature must work without any paid service or API subscription.
+
+Do not generate a static dashboard mockup. Build a genuinely functioning application with real data integrations, interactive charts, working tools, real indicator calculations, and fully operational navigation.
+
+---
+
+# 1. ABSOLUTE NON-NEGOTIABLE REQUIREMENTS
+
+1. Use free public market-data APIs with no required exchange credentials.
+
+2. Use open-source libraries for charting, visualization, analysis, and infrastructure wherever possible.
+
+3. Prefer dependencies with permissive licenses such as MIT, Apache 2.0, or BSD. Verify their licenses before integration.
+
+4. Do not use premium chart SDKs, paid financial-data APIs, paid indicators, or subscription-only analytics services.
+
+5. Never fabricate cryptocurrency prices, candlesticks, historical performance, signals, market sentiment, or indicator values.
+
+6. Every displayed price and indicator must originate from actual sourced market data.
+
+7. Every signal must be mathematically calculated, reproducible, explainable, timestamped, and auditable.
+
+8. The application must remain fully functional without an AI API key.
+
+9. AI features must be optional, with support for user-configured providers.
+
+10. UI design must be minimal, premium, responsive, fast, and exceptionally easy to navigate.
+
+11. Create genuine interactive 3D financial charts, not static chart screenshots with decorative transformations.
+
+12. All advanced functionality must have appropriate loading states, error handling, empty states, and unsupported-data notices.
+
+13. If insufficient valid market data is available, display an honest unavailable or insufficient-data state rather than an invented result.
+
+14. Do not promise certain outcomes or present indicator agreement as guaranteed predictive accuracy.
+
+15. Complete the implementation, testing, and integration yourself. Do not stop after designing the interface or generating placeholder components.
+
+---
+
+# 2. APPLICATION BRAND AND DESIGN SYSTEM
+
+## Product name
+
+**CRYPTOLENS**
+
+Tagline: **See Beyond the Market.**
+
+Secondary description:
+
+"Real-time cryptocurrency intelligence, multidimensional market visualization, and explainable technical signals."
+
+## Visual direction
+
+Create an elegant, minimal, modern financial analytics dashboard.
+
+Visual inspiration:
+
+- Professional institutional research terminals.
+- Swiss typography and modern editorial grids.
+- High-end financial SaaS products.
+- Clean modern data dashboards.
+- Subtle futuristic visual elements.
+- Spatial and kinetic interface design.
+
+Avoid:
+
+- Excessive gradients.
+- Oversized glowing cards.
+- Unnecessary decorative effects.
+- Cartoon-style graphics.
+- Generic AI-generated dashboard aesthetics.
+- Excessive icons.
+- Complex and confusing navigation.
+- Too many competing accent colors.
+
+## Color palette
+
+Primary dark theme:
+
+- Background: `#0B0F14`
+- Sidebar: `#10151C`
+- Cards: `#151B23`
+- Elevated surfaces: `#1B232D`
+- Primary text: `#F4F7FA`
+- Secondary text: `#8B97A5`
+- Borders: `#27313C`
+- Accent: `#B6F36A`
+- Bullish: `#35C89A`
+- Bearish: `#F16B72`
+- Neutral: `#94A3B8`
+
+Light theme:
+
+- Background: `#F7F9FB`
+- Cards: `#FFFFFF`
+- Primary text: `#17212B`
+- Secondary text: `#677482`
+- Borders: `#E6EBF0`
+- Accent: `#6B9F30`
+
+Support automatic system theme selection and manual overrides.
+
+## Typography
+
+Use:
+
+- Inter or Geist for interface text.
+- IBM Plex Mono for market figures, timestamps, and technical values.
+- Large bold typography sparingly.
+- Strong alignment and consistent decimal formatting.
+
+## UI characteristics
+
+- 12px rounded cards.
+- Subtle borders and shadows.
+- Generous whitespace.
+- Compact financial tables.
+- Dense-data mode.
+- Smooth 150–250ms transitions.
+- Elegant hover interactions.
+- Animated number updates.
+- Skeleton loading states.
+- Responsive grid layouts.
+- Persistent user preferences.
+- Keyboard-accessible navigation.
+- Command search using `Ctrl/Cmd + K`.
+
+## Main desktop layout
+
+Use a collapsible left sidebar with:
+
+1. Overview
+2. Markets
+3. Asset Explorer
+4. Live Signals
+5. Advanced Screener
+6. 3D Chart Studio
+7. Market Heatmaps
+8. Derivatives Analytics
+9. DeFi Intelligence
+10. Compare Assets
+11. Alerts
+12. AI Research
+13. Settings
+
+The top navigation must contain:
+
+- Global pair search.
+- Exchange selector.
+- Market-type selector.
+- Global data-status indicator.
+- UTC/local timezone selector.
+- Quick timeframe selection.
+- Theme switch.
+- Notifications.
+- Settings access.
+
+On mobile, replace the sidebar with an accessible drawer and prioritize essential analytics.
+
+---
+
+# 3. TECHNOLOGY STACK
+
+Build with the following preferred architecture.
+
+## Frontend
+
+- Next.js with App Router.
+- React.
+- TypeScript in strict mode.
+- Tailwind CSS.
+- shadcn/ui.
+- Radix UI primitives.
+- Lucide icons.
+- TanStack Query.
+- Zustand.
+- TanStack Table.
+- React Hook Form.
+- Zod.
+
+## Financial charting
+
+- TradingView Lightweight Charts for accurate, high-performance 2D financial charts.
+- Apache ECharts for heatmaps, radar charts, comparative analytics, and statistical visualizations.
+- Custom SVG/Canvas overlays where necessary.
+
+## 3D charting
+
+- Three.js.
+- React Three Fiber.
+- React Three Drei.
+- WebGL2, with graceful feature detection and fallback behavior.
+
+## Technical analysis
+
+Use an established, maintained, permissively licensed TypeScript indicator library where suitable.
+
+Candidates include:
+
+- `trading-signals`
+- `technicalindicators`
+
+Implement and test custom calculations for indicators or patterns not reliably covered by the selected library.
+
+Never depend on a black-box signal API for the primary signal calculations.
+
+## Backend
+
+Use TypeScript and Node.js.
+
+Implement:
+
+- API routes.
+- Market-data adapters.
+- A WebSocket aggregation service.
+- Technical-indicator computation.
+- Signal computation.
+- Market screening.
+- Alert evaluation.
+- Historical-data caching.
+- AI provider adapters.
+
+Use a long-running Node.js service for persistent WebSocket connections and background market scanning.
+
+Do not assume serverless functions can maintain permanent WebSocket connections.
+
+## Database
+
+Use SQLite with Drizzle ORM.
+
+Persist:
+
+- User preferences.
+- Watchlists.
+- Alerts.
+- Signal history.
+- Cached candles.
+- Scan definitions.
+- Historical signal-validation records.
+- Provider configuration metadata.
+
+Keep the default application single-user and self-hostable.
+
+Do not require registration or authentication for local operation.
+
+If optional multi-user support is introduced, isolate user-specific information appropriately.
+
+## Deployment
+
+Support:
+
+- Local development.
+- Self-hosted Node.js deployment.
+- Docker Compose.
+- Optional deployment to compatible hosting infrastructure.
+
+Provide an optimized standalone production build.
+
+The local application must operate at $0 infrastructure cost.
+
+Do not assume that unrestricted public hosting, unlimited WebSocket connections, or high-volume cloud storage are available for free.
+
+---
+
+# 4. REAL-TIME MARKET DATA ENGINE
+
+Implement a robust market-data layer.
+
+## Primary providers
+
+### Binance public market-data API
+
+Use for supported spot-market data:
+
+- Trading pairs.
+- Live prices.
+- Candlesticks.
+- Historical OHLCV.
+- Tickers.
+- Bid/ask quotations.
+- Public order-book depth.
+- Recent trades.
+- Volume.
+- Price changes.
+
+Use documented public REST endpoints for historical data and public WebSocket streams for streaming updates.
+
+### Bybit V5 public API
+
+Use for supported spot and perpetual-market data:
+
+- Market tickers.
+- Candlesticks.
+- Funding rates.
+- Open interest.
+- Order-book depth.
+- Mark prices.
+- Index prices.
+- Premium information.
+- Public long/short ratio data when available.
+- Historical derivatives data where supported.
+
+### Kraken public API
+
+Implement as an additional spot-market provider and optional fallback for supported pairs.
+
+Support both REST and public streaming endpoints where available.
+
+### Optional additional providers
+
+Support integration adapters for other reliable public market-data feeds, such as Coinbase Exchange.
+
+Optional supplementary data:
+
+- DefiLlama free endpoints for DeFi analytics.
+- Alternative.me for its published Fear & Greed Index.
+- CoinGecko Demo API for broader asset metadata, only when configured and within its free quota.
+
+Do not require CoinGecko for core operation.
+
+Do not assume that every endpoint is public, free, globally accessible, or unlimited.
+
+Verify current provider documentation, usage restrictions, attribution requirements, and allowed access methods.
+
+## Data-provider architecture
+
+Create a common provider interface.
+
+Every provider must expose normalized operations for supported capabilities.
+
+Use a canonical market identifier containing:
+
+- Exchange.
+- Market type.
+- Base asset.
+- Quote asset.
+- Native exchange symbol.
+
+For example, Binance spot BTC/USDT and Bybit linear BTC/USDT must remain separate instruments.
+
+Never silently combine spot and perpetual futures candles.
+
+Never substitute data from another exchange without showing the new source.
+
+Every market object must include:
+
+- Symbol.
+- Exchange.
+- Market type.
+- Last price.
+- Bid.
+- Ask.
+- 24-hour change.
+- 24-hour volume.
+- Base volume.
+- Quote volume.
+- Data timestamp.
+- Connection status.
+- Source metadata.
+
+Convert units correctly.
+
+## Live-stream architecture
+
+Implement:
+
+1. Dynamic WebSocket subscriptions.
+2. Automatic reconnection.
+3. Exponential backoff.
+4. Heartbeat handling.
+5. Stale-data detection.
+6. Rate-limit protection.
+7. Message validation.
+8. Duplicate-event protection.
+9. Out-of-order update handling.
+10. Subscription cleanup.
+11. Automatic recovery after temporary disconnects.
+12. Efficient multiplexing.
+13. A diagnostic panel showing provider health.
+
+Use REST for historical bootstrap and WebSocket for live updates.
+
+Maintain candle state correctly.
+
+Distinguish between:
+
+- Current forming candle.
+- Last completed candle.
+- Last traded price.
+
+Never label a forming candle as confirmed.
+
+## Data freshness
+
+Display:
+
+- LIVE when updates are current.
+- DELAYED when market information is behind.
+- RECONNECTING during interruption.
+- STALE when data exceeds the freshness threshold.
+- UNAVAILABLE when the provider cannot supply usable information.
+
+Choose freshness thresholds appropriate to each data type.
+
+For example, a live ticker and a daily Fear & Greed Index must not share the same threshold.
+
+Do not display a fake real-time indicator while the connection is offline.
+
+---
+
+# 5. MAIN OVERVIEW DASHBOARD
+
+Create a beautiful and information-rich homepage.
+
+## Top summary cards
+
+Include:
+
+- Total crypto market capitalization, when available.
+- 24-hour aggregate market volume, when available.
+- BTC dominance, when available.
+- ETH dominance, when available.
+- Fear & Greed Index.
+- Number of tracked assets.
+- Number of currently bullish assets.
+- Number of currently bearish assets.
+- Number of neutral assets.
+- Market breadth score.
+
+Only display metrics when a suitable source or valid calculation exists.
+
+For aggregate statistics, clearly distinguish whole-market coverage from exchange-specific coverage.
+
+## Main dashboard sections
+
+### A. Market Pulse
+
+Display:
+
+- Overall market bias.
+- Bullish/bearish breadth.
+- Major market movement.
+- BTC trend.
+- ETH trend.
+- Volume conditions.
+- Volatility regime.
+- Current market sentiment.
+- Market data freshness.
+
+### B. Top movers
+
+Tables for:
+
+- Top gainers.
+- Top losers.
+- Highest volume.
+- Unusual volume.
+- Strongest momentum.
+- Strongest downtrend.
+- Recent technical breakouts.
+
+### C. Market heatmap
+
+Display a responsive heatmap of tracked crypto assets.
+
+Heatmap characteristics:
+
+- Tile size based on an explicitly selected metric.
+- Color based on price change.
+- Hover tooltips.
+- Timeframe controls.
+- Click to open asset analytics.
+
+### D. Signal activity
+
+Show recently triggered analytical signals.
+
+Include:
+
+- Asset.
+- Exchange.
+- Timeframe.
+- Signal type.
+- Signal strength.
+- Trigger time.
+- Current status.
+
+### E. Market leader charts
+
+Display mini charts for BTC, ETH, SOL, XRP, BNB, and other discoverable major assets.
+
+These should use real data rather than hardcoded numbers.
+
+### F. Watchlist
+
+Support:
+
+- Add asset.
+- Remove asset.
+- Reorder.
+- Sort.
+- Filter.
+- Quick-open analysis.
+- Live signal display.
+
+---
+
+# 6. ASSET EXPLORER — THE CENTRAL APPLICATION EXPERIENCE
+
+This is one of the most important pages.
+
+When the user selects any supported cryptocurrency pair, the platform must automatically build a complete analytical report.
+
+Example:
+
+**BTC/USDT → Binance → Spot → 15m**
+
+The selected market, exchange, and timeframe must drive every associated chart, indicator, and signal.
+
+## Page layout
+
+### Header
+
+Include:
+
+- Cryptocurrency icon and name.
+- Pair.
+- Exchange.
+- Spot/perpetual market label.
+- Current price.
+- 24-hour percentage change.
+- 24-hour high and low.
+- 24-hour volume.
+- Spread when available.
+- Last update time.
+- Watchlist button.
+
+### Main analytical workspace
+
+Use a responsive two-column layout.
+
+Left side:
+
+- Large financial chart.
+- 2D/3D toggle.
+- Timeframe controls.
+- Indicator selection.
+- Chart tools.
+
+Right side:
+
+- Current analytical signal.
+- Trend strength.
+- Signal agreement score.
+- Current market regime.
+- Indicator confluence.
+- Multi-timeframe alignment.
+- Explanation.
+- Contradictory evidence.
+- Data freshness.
+- Signal history.
+
+Below the chart:
+
+- Full indicator table.
+- Support and resistance.
+- Volume analytics.
+- Pattern detection.
+- Market structure.
+- Derivatives information when relevant.
+- Historical signals.
+
+The user should never need to navigate through multiple pages to understand the selected pair.
+
+---
+
+# 7. THE REAL-TIME MULTI-INDICATOR SIGNAL ENGINE
+
+## HIGHEST PRIORITY FEATURE
+
+Build a completely functional, deterministic analytical signal engine.
+
+Whenever the user selects a trading pair, the application must calculate its current analytical state using **10 technical indicator families**.
+
+The engine must not ask an AI model to invent a signal.
+
+The numerical signal must be generated locally from verified market data.
+
+AI may optionally explain the computed result in natural language, but AI must never overwrite the deterministic result.
+
+## Supported signals
+
+Use the following analytical classifications:
+
+1. STRONG BULLISH / STRONG BUY
+2. BULLISH / BUY
+3. NEUTRAL / WAIT
+4. BEARISH / SELL
+5. STRONG BEARISH / STRONG SELL
+6. INSUFFICIENT DATA
+
+These classifications describe technical market bias only.
+
+They are not trade-execution instructions.
+
+## Required indicators
+
+### Indicator 1 — Exponential Moving Averages
+
+Calculate:
+
+- EMA 9.
+- EMA 20.
+- EMA 50.
+- EMA 100.
+- EMA 200.
+
+Analyze:
+
+- Price relative to EMAs.
+- EMA ordering.
+- EMA slopes.
+- Bullish and bearish crossovers.
+- Short-term trend.
+- Long-term trend.
+- Trend persistence.
+
+Detect conditions such as:
+
+- Price above EMA 20, EMA 50, and EMA 200.
+- EMA 20 above EMA 50.
+- EMA 50 above EMA 200.
+- Reversal of the moving-average structure.
+
+### Indicator 2 — RSI
+
+Default: RSI 14.
+
+Analyze:
+
+- Current RSI.
+- Overbought.
+- Oversold.
+- RSI slope.
+- Momentum acceleration.
+- Bullish divergence.
+- Bearish divergence.
+- Centerline crossing.
+
+Do not assume an overbought reading is automatically bearish during a strong uptrend.
+
+### Indicator 3 — MACD
+
+Parameters:
+
+- Fast EMA: 12.
+- Slow EMA: 26.
+- Signal: 9.
+
+Analyze:
+
+- MACD line.
+- Signal line.
+- Histogram.
+- Histogram slope.
+- Bullish crossover.
+- Bearish crossover.
+- Zero-line position.
+- Momentum convergence/divergence.
+
+### Indicator 4 — ADX and Directional Movement
+
+Default: 14 periods.
+
+Calculate:
+
+- ADX.
+- +DI.
+- -DI.
+
+Analyze:
+
+- Trend strength.
+- Dominant direction.
+- Weak or range-bound conditions.
+- Strengthening trends.
+- Weakening trends.
+
+ADX represents trend strength, not bullish direction by itself.
+
+### Indicator 5 — Bollinger Bands
+
+Default:
+
+- 20-period moving average.
+- 2 standard deviations.
+
+Analyze:
+
+- Upper band.
+- Middle band.
+- Lower band.
+- Bandwidth.
+- Band expansion.
+- Band contraction.
+- Breakouts.
+- Squeeze conditions.
+- Mean-reversion context.
+
+### Indicator 6 — Stochastic RSI
+
+Use standard configurable parameters.
+
+Analyze:
+
+- %K.
+- %D.
+- Overbought.
+- Oversold.
+- Crossovers.
+- Momentum recovery.
+- Momentum exhaustion.
+
+### Indicator 7 — On-Balance Volume
+
+Calculate OBV.
+
+Analyze:
+
+- OBV trend.
+- OBV slope.
+- Price/volume confirmation.
+- Accumulation.
+- Distribution.
+- Divergences.
+
+### Indicator 8 — VWAP
+
+Calculate session VWAP where the selected market and data support it.
+
+Analyze:
+
+- Price above/below VWAP.
+- Distance from VWAP.
+- VWAP reclaim.
+- VWAP rejection.
+- Trend alignment.
+
+Use an explicitly defined UTC session or appropriate configurable anchoring.
+
+Never silently treat an incorrectly initialized VWAP as valid.
+
+### Indicator 9 — Relative Volume
+
+Default:
+
+- RVOL over the previous 20 comparable bars.
+
+Analyze:
+
+- Current volume versus historical baseline.
+- Volume spikes.
+- Low-volume price movement.
+- Breakout confirmation.
+- Abnormal participation.
+
+Use compatible completed candles and avoid comparing partially completed bar volume to completed historical bars without proper adjustment.
+
+### Indicator 10 — Average True Range
+
+Default: ATR 14.
+
+Analyze:
+
+- Current volatility.
+- Volatility expansion.
+- Volatility compression.
+- ATR relative to price.
+- Abnormally volatile conditions.
+- Signal stability.
+
+ATR must act primarily as a volatility-context and signal-quality modifier, rather than a standalone bullish or bearish vote.
+
+---
+
+# 8. SIGNAL SCORING AND CONFLUENCE MODEL
+
+Implement a transparent and configurable weighted scoring algorithm.
+
+## Base weighting
+
+Use these default directional weights:
+
+| Indicator | Weight |
+|---|---:|
+| EMA trend structure | 20 |
+| MACD | 15 |
+| RSI | 10 |
+| ADX/DMI | 15 |
+| Bollinger Bands | 10 |
+| Stochastic RSI | 10 |
+| OBV | 8 |
+| VWAP | 7 |
+| Relative volume confirmation | 5 |
+| **Total** | **100** |
+
+ATR provides a separate volatility modifier.
+
+These weights are initial design assumptions, not scientifically established optimal weights.
+
+Allow users to customize them.
+
+## Calculation rules
+
+Each directional indicator family must return:
+
+- Normalized directional evidence between -1 and +1.
+- Raw indicator values.
+- Effective weight.
+- Bullish/bearish/neutral interpretation.
+- Specific contributing rules.
+- Data sufficiency status.
+- Candle timestamp.
+
+Compute:
+
+**Directional score = Sum of weighted indicator evidence / Sum of active indicator weights × 100**
+
+The output must range from -100 to +100.
+
+Example default classification:
+
+- +60 to +100: Strong Bullish.
+- +25 to below +60: Bullish.
+- Above -25 to below +25: Neutral.
+- Above -60 to -25: Bearish.
+- -100 to -60: Strong Bearish.
+
+Use exact, non-overlapping threshold boundaries in code.
+
+## Additional safeguards
+
+A strong classification requires:
+
+- Sufficient valid indicators.
+- Adequate data coverage.
+- Alignment among major trend indicators.
+- Acceptable freshness.
+- No critical provider inconsistency.
+
+A high weighted score alone must not bypass these safeguards.
+
+If the market is extremely volatile, the volatility modifier may lower signal quality.
+
+If major indicators contradict one another, downgrade the classification or clearly display uncertainty.
+
+If insufficient candles are available for a reliable EMA 200 calculation, report incomplete coverage.
+
+Do not silently normalize missing indicators into a misleading strong signal.
+
+## Signal agreement score
+
+Calculate indicator agreement separately from the directional score.
+
+Display:
+
+- Bullish indicators.
+- Bearish indicators.
+- Neutral indicators.
+- Unavailable indicators.
+- Percentage agreement.
+- Data coverage.
+
+Do not label agreement as prediction accuracy.
+
+## Signal strength and confidence
+
+Provide distinct fields for:
+
+- Directional score.
+- Indicator agreement.
+- Data quality.
+- Signal stability.
+- Historical reliability, only when measured.
+
+If historical reliability has not been established using adequate out-of-sample data, display "Not calibrated".
+
+Never display fabricated values such as "97% probability of success".
+
+---
+
+# 9. CONFIRMED SIGNALS VS LIVE PREVIEWS
+
+This distinction is essential.
+
+The application must display two different states.
+
+## Confirmed signal
+
+Calculated from the most recent completed candle.
+
+This is the primary published analytical classification.
+
+## Live preview
+
+Calculated using the currently forming candle.
+
+This may change before candle close.
+
+Display a visible "Provisional" label.
+
+For example:
+
+Confirmed: Bullish  
+Live preview: Strong Bullish — Unconfirmed
+
+Do not generate permanent historical signal records from unconfirmed candle states.
+
+Create event records only after the relevant confirmation criteria are satisfied.
+
+Handle revised or corrected exchange candle data explicitly.
+
+---
+
+# 10. EXPLAINABLE SIGNAL REPORTS
+
+Every signal must contain a detailed reasoning panel.
+
+Do not show a signal badge without an explanation.
+
+## Signal report structure
+
+### A. Current market condition
+
+Display:
+
+- Dominant direction.
+- Momentum state.
+- Volume confirmation.
+- Volatility condition.
+- Trend strength.
+- Consolidation or breakout status.
+
+### B. Why this signal appeared
+
+Explain the individual indicator contributions.
+
+Example structure:
+
+**BTC/USDT — Illustrative Bullish Report**
+
+- EMA 20 is above EMA 50.
+- MACD histogram is positive and increasing.
+- RSI is above the centerline.
+- +DI is above -DI.
+- ADX indicates a strengthening trend.
+- Price is above session VWAP.
+- RVOL confirms above-average participation.
+
+This example is illustrative only.
+
+The live application must generate such statements from actual calculated values.
+
+### C. Contradictory evidence
+
+Always explain important counterarguments.
+
+For example:
+
+- Stochastic RSI indicates overextension.
+- Price is close to resistance.
+- Volume confirmation is weak.
+- Higher timeframe remains bearish.
+
+### D. Invalidation conditions
+
+Explain which observable market changes would weaken or reverse the analytical classification.
+
+These are indicator-state conditions, not instructions to place financial orders.
+
+Examples:
+
+- MACD bearish crossover.
+- Price closing below EMA 50.
+- Loss of VWAP.
+- Deteriorating ADX/DMI alignment.
+- Failure to sustain volume confirmation.
+
+### E. Signal metadata
+
+Display:
+
+- Pair.
+- Exchange.
+- Market type.
+- Timeframe.
+- Computed score.
+- Agreement score.
+- Data quality.
+- Last completed candle.
+- Calculation timestamp.
+- Engine version.
+- Indicator configuration version.
+
+Include an expandable "Show calculations" panel containing the raw mathematical evidence.
+
+---
+
+# 11. MULTI-TIMEFRAME ANALYSIS
+
+Implement independent analysis for:
+
+- 1 minute.
+- 3 minutes.
+- 5 minutes.
+- 15 minutes.
+- 30 minutes.
+- 1 hour.
+- 2 hours.
+- 4 hours.
+- 6 hours.
+- 12 hours.
+- 1 day.
+- 1 week.
+
+Only offer a timeframe when the provider supports it or it can be accurately constructed from compatible underlying candles.
+
+The same selected pair should display a multi-timeframe analysis matrix.
+
+Example presentation:
+
+| Timeframe | Direction | Strength | Agreement |
+|---|---|---|---|
+| 5m | Bullish | Moderate | 7/9 |
+| 15m | Bullish | Strong | 8/9 |
+| 1h | Neutral | Weak | 5/9 |
+| 4h | Bearish | Moderate | 6/9 |
+| 1D | Bearish | Strong | 8/9 |
+
+These values are examples, not actual market readings.
+
+Calculate each timeframe independently from its own valid candle history.
+
+Do not simply extrapolate one timeframe's signal into another.
+
+Add:
+
+- Trend alignment summary.
+- Timeframe conflict warnings.
+- Multi-timeframe momentum.
+- Higher-timeframe context.
+- Signal consistency score.
+
+---
+
+# 12. FULLY INTERACTIVE 3D FINANCIAL CHART STUDIO
+
+## CRITICAL FEATURE
+
+Build an actual interactive WebGL-based 3D charting system.
+
+Users must be able to switch between:
+
+**2D Professional Chart**
+
+and
+
+**3D Market Visualization**
+
+Both modes must share the same selected asset, timeframe, candles, and indicator data.
+
+## 2D chart functionality
+
+Use Lightweight Charts.
+
+Support:
+
+- Candlesticks.
+- OHLC bars.
+- Line charts.
+- Area charts.
+- Heikin-Ashi derived from actual OHLC.
+- Volume histograms.
+- Indicator overlays.
+- Crosshair.
+- Zoom.
+- Pan.
+- Crosshair synchronization.
+- Timeframe switching.
+- Price-axis formatting.
+- Horizontal price levels.
+- Auto-fit.
+- Screenshot export.
+
+Support drawing and analysis tools where practical.
+
+## 3D chart requirements
+
+Build with Three.js and React Three Fiber.
+
+Create genuine 3D geometries for:
+
+- Candlestick bodies.
+- Candlestick wicks.
+- Volume columns.
+- Moving-average curves.
+- Support/resistance planes.
+- Technical signal markers.
+- Volatility visualization.
+- Market-depth representations.
+
+### 3D interactions
+
+Users must be able to:
+
+1. Rotate the chart.
+2. Pan horizontally and vertically.
+3. Zoom in and out.
+4. Tilt perspective.
+5. Return to the default camera position.
+6. Switch between perspective and orthographic cameras.
+7. Hover individual candles.
+8. Select a candle.
+9. Inspect OHLCV values.
+10. Show/hide indicator layers.
+11. Focus on selected periods.
+12. Highlight bullish/bearish patterns.
+13. Export a chart image.
+14. Enter fullscreen mode.
+
+Provide an intuitive camera reset button.
+
+### 3D coordinate system
+
+Use meaningful, labeled axes.
+
+Suggested:
+
+- X-axis: time.
+- Y-axis: price.
+- Z-axis: a selected analytical dimension.
+
+Possible Z-axis modes:
+
+- Volume.
+- Volatility.
+- Indicator strength.
+- Order-book depth.
+
+Clearly label transformations and normalized values.
+
+Do not create visually impressive but analytically misleading 3D geometry.
+
+### 3D chart modes
+
+Implement:
+
+**Mode A — 3D Candlestick Explorer**
+
+True 3D candlestick geometry with interactive inspection.
+
+**Mode B — Volume Landscape**
+
+A 3D time-and-volume visualization.
+
+**Mode C — Volatility Surface**
+
+A historical visualization using observed volatility metrics.
+
+Do not present a true implied-volatility surface unless actual options-implied volatility data is available.
+
+**Mode D — Market Depth**
+
+Visualize actual order-book snapshots and available historical depth records.
+
+Do not invent historical order-book depth.
+
+**Mode E — Indicator Landscape**
+
+Visualize selected indicators in a synchronized multidimensional environment.
+
+### Performance
+
+- Use GPU instancing where appropriate.
+- Limit visible geometry.
+- Avoid unnecessary per-frame allocations.
+- Lazy-load 3D modules.
+- Reuse materials and geometry.
+- Dispose resources correctly.
+- Detect WebGL failures.
+- Support reduced-motion preferences.
+- Provide a reliable 2D fallback.
+- Prevent unnecessary React rerenders during streaming updates.
+
+The 3D system must remain usable on ordinary laptops.
+
+---
+
+# 13. ADVANCED CRYPTO SCREENER
+
+Build a powerful customizable crypto screener inspired by altFINS.
+
+Users must be able to filter supported assets using real market data and computed indicators.
+
+## Filter categories
+
+### Market filters
+
+- Exchange.
+- Market type.
+- Quote currency.
+- Price.
+- 24-hour price change.
+- Volume.
+- Volatility.
+- Spread.
+- Market cap, if sourced.
+
+### Trend filters
+
+- Price above/below EMA 20.
+- Price above/below EMA 50.
+- Price above/below EMA 200.
+- EMA crossover.
+- Trend strength.
+- ADX.
+- Bullish trend.
+- Bearish trend.
+
+### Momentum filters
+
+- RSI range.
+- RSI oversold.
+- RSI overbought.
+- RSI divergence.
+- MACD crossover.
+- MACD histogram direction.
+- Stochastic RSI.
+
+### Volume filters
+
+- High RVOL.
+- Volume spike.
+- Increasing volume.
+- Decreasing volume.
+- OBV divergence.
+
+### Volatility filters
+
+- ATR percentage.
+- Bollinger squeeze.
+- Band expansion.
+- Volatility expansion.
+- Low-volatility consolidation.
+
+### Signal filters
+
+- Strong bullish.
+- Bullish.
+- Neutral.
+- Bearish.
+- Strong bearish.
+- Recently changed signal.
+- High indicator agreement.
+- Multi-timeframe alignment.
+
+## Preset screeners
+
+Include:
+
+1. Strong Uptrend.
+2. Strong Downtrend.
+3. Emerging Bullish Momentum.
+4. Emerging Bearish Momentum.
+5. Fresh MACD Crossovers.
+6. EMA Golden Cross.
+7. EMA Death Cross.
+8. Oversold Assets.
+9. Overbought Assets.
+10. High Volume Breakouts.
+11. Low Volatility Squeeze.
+12. Approaching Support.
+13. Approaching Resistance.
+14. Bullish Divergence.
+15. Bearish Divergence.
+16. Momentum Acceleration.
+17. Trend Exhaustion.
+18. Multi-Timeframe Bullish Alignment.
+19. Multi-Timeframe Bearish Alignment.
+20. Unusual Market Activity.
+
+Each preset must correspond to real executable filtering rules.
+
+## Screener interactions
+
+- Combine filters.
+- Save custom presets.
+- Sort columns.
+- Select visible columns.
+- Export CSV.
+- Open selected assets.
+- Compare results.
+- Add results to watchlist.
+- Refresh results.
+- Display calculation coverage.
+- Display scanning progress.
+
+Avoid pretending that an unlimited list of assets can be analyzed instantly under free-provider rate limits.
+
+Use batching, caching, bounded concurrency, and scheduled scanning.
+
+Display the scan universe, completion status, and last analysis timestamp.
+
+---
+
+# 14. LIVE SIGNAL FEED
+
+Create a dedicated real-time signal discovery page.
+
+This page must record actual signal events generated by the application.
+
+Include:
+
+- Asset symbol.
+- Exchange.
+- Market type.
+- Timeframe.
+- Signal classification.
+- Event type.
+- Directional score.
+- Agreement.
+- Trigger timestamp.
+- Relevant indicator changes.
+- Link to asset analysis.
+
+## Signal events
+
+Support events such as:
+
+- Signal classification changed.
+- Bullish EMA crossover.
+- Bearish EMA crossover.
+- MACD bullish crossover.
+- MACD bearish crossover.
+- RSI oversold transition.
+- RSI overbought transition.
+- Trend strengthening.
+- Trend weakening.
+- Volume breakout.
+- Bollinger squeeze release.
+- Confirmed pattern breakout.
+- VWAP reclaim.
+- VWAP loss.
+- Support break.
+- Resistance break.
+
+Events should only be recorded when the underlying conditions are satisfied.
+
+Deduplicate repeated events from the same candle.
+
+Allow filtering by:
+
+- Asset.
+- Exchange.
+- Timeframe.
+- Event type.
+- Direction.
+- Strength.
+- Time.
+- Indicator agreement.
+
+Display historical events in chronological order.
+
+Persist event history locally.
+
+---
+
+# 15. CHART PATTERN AND MARKET STRUCTURE ENGINE
+
+Build a deterministic pattern-detection module.
+
+## Candlestick patterns
+
+Support validated definitions for:
+
+- Doji.
+- Hammer.
+- Inverted Hammer.
+- Shooting Star.
+- Bullish Engulfing.
+- Bearish Engulfing.
+- Morning Star.
+- Evening Star.
+- Three White Soldiers.
+- Three Black Crows.
+- Harami.
+
+## Structural patterns
+
+Implement reliable detection rules for:
+
+- Double Top.
+- Double Bottom.
+- Head and Shoulders.
+- Inverse Head and Shoulders.
+- Ascending Triangle.
+- Descending Triangle.
+- Symmetrical Triangle.
+- Rising Wedge.
+- Falling Wedge.
+- Ascending Channel.
+- Descending Channel.
+- Range Breakout.
+
+Use transparent pivot detection and measurable pattern criteria.
+
+Do not use arbitrary visual guesses as confirmed patterns.
+
+## Support and resistance
+
+Calculate candidate levels using:
+
+- Swing highs.
+- Swing lows.
+- Confirmed pivot points.
+- Historical reaction zones.
+- Volume-price distribution where sufficiently sourced.
+- Repeated level interactions.
+
+Display:
+
+- Current support zones.
+- Current resistance zones.
+- Distance from current price.
+- Number of historical touches.
+- Level age.
+- Breakout status.
+- Level invalidation.
+
+Support and resistance represent estimated zones, not guaranteed price barriers.
+
+## Pattern details
+
+Every detection should contain:
+
+- Pattern name.
+- Timeframe.
+- Start timestamp.
+- Confirmation timestamp, if confirmed.
+- Formation status.
+- Relevant price boundaries.
+- Detection method.
+- Invalidation criteria.
+- Confidence or quality score with documented meaning.
+
+Add visual overlays to the 2D and 3D charts.
+
+---
+
+# 16. DERIVATIVES ANALYTICS
+
+Implement a dedicated derivatives analytics section using supported public APIs.
+
+## Features
+
+- Open interest.
+- Open-interest changes.
+- Funding rates.
+- Funding-rate history.
+- Mark price.
+- Index price.
+- Premium.
+- Perpetual futures volume.
+- Long/short ratios where officially available.
+- Futures basis where compatible data exists.
+- Price versus open-interest comparison.
+
+## Visualizations
+
+Provide:
+
+- Open-interest charts.
+- Funding-rate history.
+- Price/OI divergence.
+- Funding heatmap.
+- Derivatives market summary.
+- Perpetual-market comparison.
+
+## Analytical observations
+
+Detect conditions such as:
+
+- Price rising while open interest rises.
+- Price falling while open interest rises.
+- Price rising while open interest falls.
+- Price falling while open interest falls.
+- Elevated positive funding.
+- Elevated negative funding.
+- Unusual open-interest changes.
+
+Describe these as contextual interpretations rather than definitive explanations of positioning.
+
+Do not claim to know exact institutional positions or liquidation prices without suitable data.
+
+Do not fabricate liquidation heatmaps.
+
+---
+
+# 17. MARKET HEATMAPS AND VISUAL ANALYTICS
+
+Build a dedicated visualization page.
+
+Include:
+
+### Cryptocurrency performance heatmap
+
+- Price movement by selected period.
+- Color-coded performance.
+- Asset grouping.
+- Interactive hover details.
+
+### Volume heatmap
+
+- Relative volume.
+- Volume changes.
+- Trading activity.
+
+### Signal heatmap
+
+Rows: cryptocurrency pairs.
+
+Columns: timeframes.
+
+Cells: current signal direction and strength.
+
+### Correlation matrix
+
+Calculate return-based correlation using aligned historical timestamps.
+
+Support:
+
+- Pearson correlation.
+- Configurable lookback.
+- Positive/negative relationship colors.
+- Missing-data indicators.
+
+### Market breadth
+
+Display:
+
+- Bullish percentage.
+- Bearish percentage.
+- Neutral percentage.
+- Percentage above EMA 50.
+- Percentage above EMA 200.
+- Positive/negative momentum distribution.
+
+Clearly state the analyzed asset universe.
+
+### Volatility heatmap
+
+Visualize normalized historical volatility across supported assets.
+
+All heatmaps must update from real calculations.
+
+---
+
+# 18. DEFI INTELLIGENCE
+
+Use publicly available DefiLlama free endpoints where supported.
+
+Build:
+
+- Total Value Locked overview.
+- TVL by supported blockchain.
+- Protocol TVL.
+- Historical TVL charts.
+- Chain comparisons.
+- Stablecoin supply metrics where available.
+- DEX volume statistics where available.
+- Protocol revenue and fee analytics only where accessible through the free API.
+
+Provide:
+
+- Search.
+- Filters.
+- Sorting.
+- Historical charts.
+- Change metrics.
+- Data source labels.
+- Last update time.
+
+Never substitute paid-only endpoint responses with invented values.
+
+If a metric is unavailable on the free API, disable it gracefully.
+
+---
+
+# 19. ASSET COMPARISON TOOL
+
+Allow users to select up to five supported assets and compare their market behavior.
+
+Compare:
+
+- Price returns.
+- Normalized performance.
+- Volume.
+- Historical volatility.
+- RSI.
+- MACD.
+- Trend strength.
+- Directional score.
+- Signal agreement.
+- Support/resistance proximity.
+- Multi-timeframe alignment.
+- Correlation.
+
+Use synchronized dates and compatible data intervals.
+
+The tool must include:
+
+- Overlay comparison charts.
+- Relative-performance charts.
+- Side-by-side indicator tables.
+- Radar charts.
+- Correlation matrix.
+- Export functionality.
+
+Avoid comparing raw nominal prices as if they represented relative investment performance.
+
+---
+
+# 20. SMART ALERT SYSTEM
+
+Build a fully functional analytics alert system.
+
+## Alert types
+
+- Price crosses a level.
+- Percentage movement threshold.
+- Volume spike.
+- RSI threshold.
+- MACD crossover.
+- EMA crossover.
+- Signal classification changed.
+- Strong bullish signal appeared.
+- Strong bearish signal appeared.
+- ADX trend-strength threshold.
+- Price crossing VWAP.
+- Support/resistance break.
+- Funding-rate threshold.
+- Open-interest movement.
+- Pattern confirmation.
+
+## Delivery
+
+Support:
+
+- In-app notifications.
+- Browser notifications with permission.
+- Optional local desktop notifications.
+- Optional webhooks configured by the user.
+
+Do not require a paid notification service.
+
+## Alert rules
+
+Every alert must support:
+
+- Asset.
+- Exchange.
+- Timeframe.
+- Condition.
+- Threshold.
+- Enabled/disabled state.
+- Cooldown.
+- One-time or recurring behavior.
+- Last triggered timestamp.
+
+Persist alert configurations.
+
+Deduplicate repeated triggers.
+
+Document that browser-only alerts cannot run when the browser is closed unless the persistent backend continues running.
+
+---
+
+# 21. CUSTOM AI PROVIDER SETTINGS
+
+## IMPORTANT FEATURE
+
+Create a dedicated **Settings → AI Providers** panel.
+
+The application must support bring-your-own-AI-provider configuration.
+
+AI is optional.
+
+The deterministic analytics engine must continue functioning when AI is disabled.
+
+## Built-in provider adapters
+
+Implement support for:
+
+- OpenAI-compatible APIs.
+- OpenAI.
+- Anthropic.
+- Google Gemini.
+- Groq, using its supported API format.
+- Ollama for locally running open-source models.
+- Custom OpenAI-compatible endpoints.
+
+Use each provider's actual API protocol.
+
+Do not assume all AI providers have identical request formats.
+
+## Settings form
+
+Fields:
+
+- Provider name.
+- Model name.
+- Base URL where applicable.
+- API key where applicable.
+- Temperature.
+- Maximum output tokens.
+- Timeout.
+- Enable/disable AI.
+- Test connection.
+- Save configuration.
+- Remove configuration.
+
+Support multiple saved provider profiles.
+
+## API key security
+
+- Never hardcode keys.
+- Never expose keys in application logs.
+- Never put provider secrets into generated reports.
+- Never commit keys to Git.
+- Never expose server-only secrets through public environment variables.
+- Never include keys in browser URLs.
+- Prefer session-only credentials by default.
+- If persistent local storage is offered, encrypt credentials using Web Crypto and a user-supplied passphrase.
+- Do not use a hardcoded encryption key.
+- Validate custom provider endpoints.
+- Protect backend proxy routes against SSRF and internal-network access.
+- Restrict local Ollama exceptions to explicitly enabled local development.
+- Never transmit exchange credentials because none are needed.
+
+---
+
+# 22. AI MARKET ANALYSIS ASSISTANT
+
+Create a sophisticated AI research panel.
+
+## Core principle
+
+**Deterministic engine calculates. AI explains.**
+
+The AI must receive structured validated analytics rather than independently inventing market data.
+
+## AI capabilities
+
+### Explain current signal
+
+Example request:
+
+"Explain why SOL/USDT is currently bullish on the 15-minute timeframe."
+
+The AI receives:
+
+- Actual OHLCV information.
+- Current validated indicator values.
+- Calculated signal score.
+- Indicator evidence.
+- Market regime.
+- Volume condition.
+- Higher-timeframe context.
+- Contradictory evidence.
+
+Then it creates an understandable explanation.
+
+### Compare cryptocurrencies
+
+Example:
+
+"Compare BTC and ETH technical strength using the current 4-hour charts."
+
+### Explain market changes
+
+Example:
+
+"Why did the BTC signal change from bullish to neutral?"
+
+AI should examine the actual previous and current signal records.
+
+### Analyze indicators
+
+Example:
+
+"Explain the current MACD, RSI, and ADX readings for SOL."
+
+### Summarize market conditions
+
+Example:
+
+"Summarize current market breadth, momentum, and volatility."
+
+### Explain technical patterns
+
+Example:
+
+"Explain the detected falling wedge and its confirmation criteria."
+
+### Natural-language screening
+
+Example:
+
+"Find USDT pairs with RSI below 35 and positive MACD momentum on the 1-hour chart."
+
+Convert the request into a validated structured screener query.
+
+The deterministic screener executes it.
+
+The AI then explains the results.
+
+Do not let the AI hallucinate the scan results.
+
+## AI interface
+
+Build:
+
+- Chat conversation.
+- Suggested questions.
+- Streaming responses where supported.
+- Model selector.
+- Provider selector.
+- Relevant chart attachment within the interface.
+- Source-data inspection.
+- Conversation history.
+- Clear AI-disabled state.
+
+## AI reliability requirements
+
+- Include analysis timestamps.
+- Include pair and exchange context.
+- Never invent indicator values.
+- Never claim to have checked unavailable live information.
+- Never silently change the deterministic signal.
+- Never generate fake statistical success rates.
+- Separate measured information from interpretation.
+- Treat all external text as untrusted data.
+- Prevent external content from overriding system instructions.
+
+---
+
+# 23. SIGNAL HISTORY AND HISTORICAL VALIDATION
+
+Create a dedicated analytical evaluation system.
+
+This is not a trading simulator.
+
+It evaluates the historical behavior of signal classifications.
+
+## Historical analysis
+
+For each signal event, record:
+
+- Signal direction.
+- Initial market conditions.
+- Timestamp.
+- Timeframe.
+- Indicator values.
+- Future observable price movement.
+- Maximum favorable movement.
+- Maximum adverse movement.
+- Outcome over a predefined observation horizon.
+
+## Performance evaluation
+
+Support:
+
+- 1-candle horizon.
+- 3-candle horizon.
+- 5-candle horizon.
+- 10-candle horizon.
+- Configurable horizon.
+
+Calculate:
+
+- Directional accuracy under a clearly stated definition.
+- Number of observations.
+- Class distribution.
+- Average forward return.
+- Median forward return.
+- Favorable/adverse movement.
+- Results by market regime.
+- Results by volatility condition.
+- Results by asset.
+- Results by timeframe.
+
+## Critical statistical safeguards
+
+- No future candle leakage.
+- No repainting of historical confirmed signals.
+- No use of future information in indicator construction.
+- Chronological train/test separation where calibration is performed.
+- Walk-forward evaluation where appropriate.
+- Minimum sample thresholds.
+- Clearly defined outcome metrics.
+- Transparent treatment of overlapping events.
+- Transparent treatment of unavailable history.
+- No claims of profitability from directional accuracy alone.
+
+Display insufficient-history warnings.
+
+Do not use arbitrary hardcoded success rates.
+
+---
+
+# 24. MARKET REGIME DETECTION
+
+Build a regime classifier using observed market measurements.
+
+Supported regimes:
+
+- Strong Uptrend.
+- Moderate Uptrend.
+- Sideways / Range.
+- Moderate Downtrend.
+- Strong Downtrend.
+- High Volatility.
+- Low Volatility.
+- Transition / Uncertain.
+
+Use:
+
+- ADX.
+- EMA structure.
+- Realized volatility.
+- ATR.
+- Price slope.
+- Bollinger bandwidth.
+- Volume context.
+
+Separate trend direction from volatility.
+
+For example, an asset may simultaneously have a downtrend and high volatility.
+
+Show which metrics triggered each regime classification.
+
+Signal explanations should include the regime.
+
+---
+
+# 25. SIGNAL QUALITY AND DATA VALIDATION
+
+This must be treated as core engineering infrastructure.
+
+## Candle validation
+
+Check:
+
+- Valid timestamps.
+- Chronological ordering.
+- No duplicate candles.
+- High greater than or equal to open and close.
+- Low less than or equal to open and close.
+- High greater than or equal to low.
+- Nonnegative volume.
+- Finite numeric values.
+- Consistent timeframe intervals.
+- Appropriate timestamp units.
+- Appropriate exchange price precision.
+
+Do not arbitrarily reject unusual but valid market events.
+
+## Indicator validation
+
+Validate:
+
+- Warm-up periods.
+- Formula accuracy.
+- EMA initialization.
+- Wilder smoothing where required.
+- RSI boundary cases.
+- MACD calculation consistency.
+- ADX/DMI calculations.
+- Volume alignment.
+- VWAP session boundaries.
+- ATR initialization.
+- Missing data.
+- Resampling behavior.
+
+## Signal engine validation
+
+A signal must not be marked confirmed when:
+
+- The latest candle is incomplete.
+- Historical coverage is inadequate.
+- A critical indicator is invalid.
+- Data timestamps are inconsistent.
+- Provider information is stale.
+- Market identity is ambiguous.
+
+## Historical reproducibility
+
+Given identical:
+
+- Candles.
+- Settings.
+- Indicator versions.
+- Signal rules.
+
+The engine must generate identical confirmed outputs.
+
+---
+
+# 26. SETTINGS AND CUSTOMIZATION
+
+Create a full Settings page.
+
+## General
+
+- Theme.
+- Timezone.
+- Currency formatting.
+- Decimal precision.
+- Default exchange.
+- Default market type.
+- Default pair.
+- Default timeframe.
+- Sidebar preferences.
+- Dense/comfortable layout.
+
+## Charts
+
+- Default chart mode.
+- 2D/3D preference.
+- Candle colors.
+- Indicator visibility.
+- Grid lines.
+- Animation intensity.
+- Rendering quality.
+- 3D camera behavior.
+
+## Signal engine
+
+- Indicator parameters.
+- Signal thresholds.
+- Indicator weights.
+- Minimum coverage.
+- Minimum agreement.
+- Volatility safeguards.
+- Multi-timeframe settings.
+- Confirmed/live preview preferences.
+
+Validate configuration and preserve the meaning of the normalized score.
+
+## Market data
+
+- Primary provider.
+- Fallback provider.
+- Active connections.
+- Data refresh policy.
+- Cache size.
+- Provider diagnostics.
+- API usage statistics.
+
+## AI providers
+
+Provide the complete BYOK configuration panel.
+
+## Data management
+
+- Clear cache.
+- Export settings.
+- Import settings.
+- Export signal history.
+- Reset preferences.
+- Review storage usage.
+
+---
+
+# 27. DATABASE AND INTERNAL DATA MODEL
+
+Create a clean schema.
+
+Required entities include:
+
+- Asset.
+- Market.
+- Exchange.
+- Candle.
+- MarketTicker.
+- IndicatorSnapshot.
+- SignalSnapshot.
+- SignalEvent.
+- PatternDetection.
+- MarketRegime.
+- Watchlist.
+- WatchlistAsset.
+- ScreenerPreset.
+- AlertRule.
+- AlertEvent.
+- UserPreference.
+- AIProviderProfile.
+- HistoricalValidationResult.
+- MarketDataSourceStatus.
+
+Use stable IDs.
+
+Index frequently queried fields.
+
+Especially:
+
+- Market ID.
+- Timeframe.
+- Candle open timestamp.
+- Signal event timestamp.
+- Indicator calculation timestamp.
+
+Enforce uniqueness constraints to prevent duplicated candle and signal records.
+
+Add migrations.
+
+---
+
+# 28. BACKEND API DESIGN
+
+Build typed, validated API endpoints.
+
+At minimum support equivalent operations for:
+
+- `/api/health`
+- `/api/providers`
+- `/api/providers/status`
+- `/api/markets`
+- `/api/markets/search`
+- `/api/tickers`
+- `/api/candles`
+- `/api/indicators`
+- `/api/signals/current`
+- `/api/signals/history`
+- `/api/signals/feed`
+- `/api/signals/explain`
+- `/api/screener`
+- `/api/screener/presets`
+- `/api/patterns`
+- `/api/market-regime`
+- `/api/market-breadth`
+- `/api/derivatives`
+- `/api/orderbook`
+- `/api/defi`
+- `/api/compare`
+- `/api/alerts`
+- `/api/settings`
+- `/api/ai/analyze`
+- `/api/diagnostics`
+
+Implement suitable real-time streaming endpoints.
+
+Use:
+
+- Zod input validation.
+- Structured errors.
+- Strict typing.
+- Rate limiting.
+- Request cancellation.
+- Cache headers where appropriate.
+- Consistent response schemas.
+
+Protect mutation endpoints appropriately for the selected deployment model.
+
+Do not expose an unrestricted public AI proxy.
+
+Document all endpoints.
+
+---
+
+# 29. PERFORMANCE ARCHITECTURE
+
+The platform must feel fast and responsive.
+
+## Market data optimization
+
+Implement:
+
+- Shared subscriptions.
+- Cached symbol metadata.
+- Cached historical candles.
+- Incremental candle updates.
+- Indicator recalculation only when required.
+- Background symbol scanning.
+- Bounded concurrency.
+- Efficient provider batching.
+- Data deduplication.
+- Rate-limit-aware request scheduling.
+
+## Frontend optimization
+
+Implement:
+
+- Lazy loading.
+- Route-level code splitting.
+- Suspense boundaries.
+- Virtualized tables.
+- Memoized expensive computations.
+- Efficient state subscriptions.
+- Optimized WebGL rendering.
+- Responsive chart sizing.
+- Streaming-state batching.
+
+## Stability
+
+No memory leaks from:
+
+- WebSockets.
+- Timers.
+- Chart subscriptions.
+- Three.js geometry.
+- Browser event listeners.
+- Abandoned API requests.
+
+Market switching must unsubscribe from obsolete feeds correctly.
+
+---
+
+# 30. RESPONSIVE DESIGN
+
+Build dedicated layouts for:
+
+- 1440px+ desktop.
+- 1024px laptop.
+- 768px tablet.
+- 390px mobile.
+- Smaller supported mobile widths.
+
+## Mobile priorities
+
+- Current selected asset.
+- Live price.
+- Current signal.
+- Signal explanation.
+- Main chart.
+- Timeframe controls.
+- Important indicator summary.
+
+Allow advanced tables and technical detail panels to collapse or scroll appropriately.
+
+Prevent horizontal layout overflow.
+
+Keep touch controls usable.
+
+The 3D chart must support touch gestures and automatically offer a 2D fallback on unsupported devices.
+
+---
+
+# 31. MICRO-INTERACTIONS AND FINISHING DETAILS
+
+Add premium, restrained interactions.
+
+Examples:
+
+- Smooth page transitions.
+- Animated ticker updates.
+- Subtle price-change flashes.
+- Hover elevation.
+- Chart loading skeletons.
+- Signal transition animations.
+- Collapsible analytical panels.
+- Animated score meter.
+- Drag-to-reorder watchlists.
+- Search keyboard shortcuts.
+- Custom tooltips.
+- Timeframe selection transitions.
+- Nonintrusive alert notifications.
+
+Use animations to improve clarity.
+
+Do not sacrifice performance for decorative effects.
+
+---
+
+# 32. EMPTY STATES AND FAILURE HANDLING
+
+Every page must remain understandable when data cannot be loaded.
+
+Examples:
+
+**Unsupported Pair**
+
+"This market is not available from the selected exchange."
+
+**Insufficient History**
+
+"More completed candles are required before a reliable signal can be calculated."
+
+**Disconnected**
+
+"Live market data is temporarily unavailable. Showing the last verified snapshot."
+
+**AI Disabled**
+
+"Connect an AI provider in Settings to enable AI-powered explanations. Technical analytics remain available."
+
+**No Screener Results**
+
+"No supported assets match the selected conditions."
+
+Do not display zero values when the data is actually unknown.
+
+---
+
+# 33. AUTOMATED TESTING REQUIREMENTS
+
+Build a serious automated testing setup.
+
+Use:
+
+- Vitest.
+- React Testing Library.
+- Playwright.
+- TypeScript strict checks.
+- ESLint.
+- Suitable API integration tests.
+
+## Indicator tests
+
+Test:
+
+- EMA.
+- RSI.
+- MACD.
+- ADX/DMI.
+- Bollinger Bands.
+- Stochastic RSI.
+- OBV.
+- VWAP.
+- RVOL.
+- ATR.
+
+Use reproducible datasets with independently verified expected results.
+
+## Signal engine tests
+
+Test:
+
+1. Strong bullish confluence.
+2. Strong bearish confluence.
+3. Conflicting indicators.
+4. Sideways markets.
+5. Sudden volatility spikes.
+6. Missing candles.
+7. Insufficient history.
+8. Stale data.
+9. Missing indicator values.
+10. Higher-timeframe disagreement.
+11. Candle-close confirmation.
+12. Historical signal reproducibility.
+
+## Integration tests
+
+Test:
+
+- Provider normalization.
+- REST candle retrieval.
+- WebSocket event handling.
+- Reconnection.
+- Rate limits.
+- Exchange switching.
+- Pair switching.
+- Timeframe switching.
+- Signal refresh.
+- Watchlist persistence.
+- Screener calculations.
+- Alert triggers.
+- Settings persistence.
+- AI provider connection handling.
+
+## UI tests
+
+Use Playwright to test the actual user workflows.
+
+Test:
+
+- Dashboard loads.
+- Market search works.
+- Asset selection works.
+- Charts render.
+- 2D/3D switching works.
+- Indicator controls work.
+- Signal explanation opens.
+- Filters apply.
+- Alerts can be created and removed.
+- Settings save correctly.
+- Responsive navigation works.
+- Invalid API credentials produce appropriate errors.
+
+Test WebGL availability and fallback behavior.
+
+## Important
+
+A passing mocked integration test does not prove live market connectivity.
+
+Where network access is available, perform real read-only public API smoke tests.
+
+If live access is restricted, clearly document which connections remain unverified.
+
+Do not claim everything works unless it has actually been tested.
+
+---
+
+# 34. REQUIRED PROJECT STRUCTURE
+
+Use a maintainable modular architecture.
+
+Recommended organization:
+
+**Application**
+
+- Routes.
+- Page layouts.
+- Shared components.
+- Charts.
+- Signals.
+- Tables.
+- Settings.
+- Research panels.
+
+**Market data**
+
+- Exchange adapters.
+- Normalized market schemas.
+- WebSocket manager.
+- Historical downloader.
+- Cache layer.
+- Source health monitoring.
+
+**Analytics**
+
+- Indicators.
+- Signal scoring.
+- Market regimes.
+- Pattern recognition.
+- Market breadth.
+- Correlation.
+- Historical validation.
+
+**Services**
+
+- Alert engine.
+- Screener engine.
+- AI adapters.
+- Data storage.
+- Background jobs.
+
+**Shared**
+
+- Type definitions.
+- Validation schemas.
+- Utilities.
+- Constants.
+- Mathematical helpers.
+
+**Testing**
+
+- Unit tests.
+- Integration tests.
+- End-to-end tests.
+- Fixture datasets.
+
+Maintain strict separation between data retrieval, analytical computation, and presentation.
+
+---
+
+# 35. FIRST-RUN EXPERIENCE
+
+The application must work immediately after installation.
+
+On the first launch:
+
+1. Initialize the local database.
+2. Load available exchange symbols.
+3. Connect to a functioning public market-data source.
+4. Open the Overview dashboard.
+5. Select a supported major pair by default.
+6. Load historical candles.
+7. Initialize real-time streaming.
+8. Calculate available indicators.
+9. Generate the current deterministic signal.
+10. Display the full analytical explanation.
+
+Do not require the user to create an account.
+
+Do not require a paid API key.
+
+Do not require AI configuration.
+
+If the preferred exchange cannot be reached, attempt an explicitly labeled compatible fallback.
+
+If no provider is accessible, show clear diagnostics.
+
+Do not silently switch to fake demonstration data.
+
+---
+
+# 36. DEVELOPMENT EXECUTION PROCESS
+
+Follow this implementation sequence.
+
+## Phase 1 — Research and architecture
+
+- Inspect the repository.
+- Verify the required libraries.
+- Review official API documentation.
+- Confirm compatibility and licenses.
+- Establish the complete application structure.
+- Identify free-tier limitations.
+- Design the normalized market-data model.
+
+## Phase 2 — Foundation
+
+- Initialize Next.js and TypeScript.
+- Install dependencies.
+- Build the design system.
+- Implement the responsive application shell.
+- Create functional navigation.
+- Configure the database.
+- Add settings persistence.
+
+## Phase 3 — Market data
+
+- Build exchange adapters.
+- Fetch real market symbols.
+- Fetch historical candles.
+- Add live WebSocket subscriptions.
+- Implement caching and reconnection.
+- Add diagnostics and failure handling.
+
+Verify this layer independently before continuing.
+
+## Phase 4 — Analytics engine
+
+- Implement all required indicators.
+- Validate mathematical results.
+- Build the weighted signal calculator.
+- Implement confirmation rules.
+- Build explanation generation.
+- Add market regime detection.
+- Add signal history.
+
+Verify signal reproducibility.
+
+## Phase 5 — Charts
+
+- Build professional 2D charts.
+- Add indicator overlays.
+- Build actual 3D WebGL charts.
+- Add 3D controls and interactions.
+- Synchronize chart and analytics state.
+
+## Phase 6 — Advanced research
+
+- Build the market screener.
+- Implement signal feed.
+- Add pattern detection.
+- Add heatmaps.
+- Add derivatives analytics.
+- Add DeFi intelligence.
+- Add comparison tools.
+
+## Phase 7 — AI
+
+- Implement provider adapters.
+- Build the custom provider settings.
+- Add secure key handling.
+- Create the AI research assistant.
+- Ensure deterministic analytics remain independent.
+
+## Phase 8 — Alerts and personalization
+
+- Add watchlists.
+- Add alert evaluation.
+- Add notifications.
+- Add saved screeners.
+- Add user preferences.
+
+## Phase 9 — Validation
+
+- Run unit tests.
+- Run integration tests.
+- Run browser tests.
+- Check responsive layouts.
+- Check console errors.
+- Verify memory cleanup.
+- Verify 3D fallback.
+- Verify genuine public market-data integration.
+
+## Phase 10 — Production readiness
+
+- Produce a production build.
+- Add Docker support.
+- Add environment configuration.
+- Create documentation.
+- Include setup and troubleshooting instructions.
+- Verify startup commands.
+
+Do not stop after Phase 1 or Phase 2.
+
+Continue implementing until the application is functional.
+
+---
+
+# 37. STRICT CODEX BEHAVIOR INSTRUCTIONS
+
+You are responsible for producing a complete application.
+
+Do not:
+
+- Create only a landing page.
+- Deliver only a dashboard screenshot.
+- Create fake charts.
+- Invent cryptocurrency prices.
+- Hardcode artificial signals.
+- Make indicator cards decorative.
+- Use buttons without functionality.
+- Leave disconnected pages.
+- Add unsupported AI claims.
+- Substitute static JSON examples for live market data.
+- Introduce unnecessary paid dependencies.
+- Introduce trading functionality.
+- Claim tests passed without running them.
+- Conceal incomplete functionality.
+
+If an endpoint is inaccessible, implement robust fallback behavior and report the limitation.
+
+If a particular feature requires unavailable data, mark it unsupported instead of inventing a result.
+
+Do not leave broken imports, missing modules, unresolved dependencies, or avoidable runtime exceptions.
+
+Use strict TypeScript typing.
+
+Use accessible semantic UI components.
+
+Document important numerical assumptions and indicator formulas.
+
+Preserve relevant source attribution and library license notices.
+
+If a feature cannot be completed, clearly identify it in the final implementation report instead of presenting it as finished.
+
+---
+
+# 38. FINAL ACCEPTANCE CRITERIA
+
+The application is complete only when the following are satisfied:
+
+- [ ] Application starts successfully.
+- [ ] Desktop and mobile navigation work.
+- [ ] Real market pairs load from a public source.
+- [ ] Current prices update from actual market data.
+- [ ] Historical OHLCV is retrieved correctly.
+- [ ] WebSocket updates work for supported markets.
+- [ ] 2D charts display valid candles.
+- [ ] 3D charts are genuinely interactive.
+- [ ] All ten indicator families are implemented.
+- [ ] Indicators use mathematically correct formulas.
+- [ ] Signal scores are derived from real indicator values.
+- [ ] Signals update when confirmed market conditions change.
+- [ ] Provisional signals are visually distinguished.
+- [ ] Every signal provides detailed reasoning.
+- [ ] Contradictory indicator evidence is shown.
+- [ ] Multi-timeframe analysis works.
+- [ ] Market screener filters work.
+- [ ] Signal history persists.
+- [ ] Market heatmaps work.
+- [ ] Derivatives analytics use actual sourced data.
+- [ ] Watchlists persist.
+- [ ] Alerts trigger correctly while the necessary services run.
+- [ ] AI works with a valid custom provider configuration.
+- [ ] All core analytics work with AI disabled.
+- [ ] User secrets are protected appropriately.
+- [ ] Data errors never become fabricated market figures.
+- [ ] Responsive layouts are tested.
+- [ ] TypeScript checks pass.
+- [ ] Automated tests pass.
+- [ ] Production build succeeds.
+- [ ] Setup instructions are complete.
+
+---
+
+# 39. REQUIRED FINAL DELIVERABLES
+
+Provide:
+
+1. Complete source code.
+2. Functional Next.js application.
+3. Public exchange-data integrations.
+4. Real-time WebSocket infrastructure.
+5. Deterministic indicator engine.
+6. Explainable signal engine.
+7. Interactive 2D and 3D charts.
+8. Functional market screener.
+9. Working analytics modules.
+10. Custom AI provider integration.
+11. SQLite database and migrations.
+12. Automated tests.
+13. Docker configuration.
+14. `.env.example` containing no secrets.
+15. Installation instructions.
+16. Development and production startup commands.
+17. API documentation.
+18. Mathematical signal-engine documentation.
+19. Provider attribution and dependency license information.
+20. A clear report identifying tested functionality and any remaining limitations.
+
+The complete application must be usable without a commercial subscription.
+
+---
+
+# 40. FINAL PRODUCT EXPERIENCE
+
+When a user opens CRYPTOLENS, it should feel like entering a professional cryptocurrency intelligence terminal.
+
+The interface is clean and understated.
+
+Live market data updates naturally.
+
+Charts are visually sophisticated but mathematically faithful.
+
+The user searches for a pair.
+
+Instantly, the application begins loading verified market information and displays:
+
+- Current price.
+- Market conditions.
+- A detailed interactive chart.
+- Ten technical indicator families.
+- A directional signal.
+- Indicator agreement.
+- Volatility conditions.
+- Multi-timeframe analysis.
+- Supporting and contradictory evidence.
+- A transparent explanation of the signal.
+- Historical context.
+
+The user can rotate an interactive 3D candlestick chart, investigate market structure, discover assets through advanced screening, monitor new signals, and ask an optional AI assistant to explain the data.
+
+Nothing feels disconnected.
+
+Nothing relies on made-up data.
+
+Nothing requires a trading account.
+
+Every essential analytical feature works using free public market-data sources and open-source technologies.
+
+**The final result should be a technically rigorous, visually exceptional, reliable, zero-subscription cryptocurrency analytics workspace that users would genuinely want to open every day.**
+
+**BUILD THE APPLICATION — NOT A PROTOTYPE, NOT A DESIGN CONCEPT, AND NOT JUST A UI DEMO.**
+
+Begin implementation now.
