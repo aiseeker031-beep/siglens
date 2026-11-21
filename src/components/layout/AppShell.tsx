@@ -1,12 +1,14 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { AnimatePresence, motion } from 'motion/react';
 import {
+  ArrowLeftRight,
   BarChart3,
   Bell,
   Bot,
   ChevronLeft,
   ChevronRight,
   Filter,
+  Globe,
   Grid2x2,
   Home,
   Menu,
@@ -20,6 +22,7 @@ import { EXCHANGE_LABELS, EXCHANGE_MARKET_TYPES } from '../../shared/constants';
 import { formatPercent, formatPrice, formatTimestamp } from '../../shared/format';
 import type { ExchangeId, MarketType, NavSection } from '../../shared/types';
 import { useAppStore } from '../../store/useAppStore';
+import { GoogleAuthButton } from '../ui/GoogleAuthButton';
 import { KINETIC_EASE, KINETIC_SPRING, KineticSegmentedControl } from '../ui/Kinetic';
 
 type AssetClass = 'crypto' | 'stocks' | 'cfds';
@@ -40,6 +43,7 @@ const PRIMARY_NAV: {
   { id: 'signals', label: 'Signals', icon: Radio },
   { id: 'screener', label: 'Screener', icon: Filter },
   { id: 'heatmaps', label: 'Heatmaps', icon: Grid2x2 },
+  { id: 'arbitrage', label: 'Arbitrage', icon: ArrowLeftRight, badge: 'LIVE' },
   { id: 'arena', label: 'Bot Arena', icon: Bot, badge: 'NEW' },
   { id: 'ai', label: 'AI Insights', icon: Sparkles },
 ];
@@ -50,6 +54,7 @@ const SECTION_TITLES: Record<NavSection, string> = {
   signals: 'Live Signal Feed',
   screener: 'Advanced Screener',
   heatmaps: 'Market Heatmaps',
+  arbitrage: 'Real-Time Arbitrage Scanner',
   arena: 'Autonomous Bot Arena',
   ai: 'AI Research Insights',
   settings: 'Settings & Diagnostics',
@@ -96,7 +101,10 @@ function formatHeaderClock(date: Date, timezone: 'UTC' | 'local'): string {
   }
 }
 
-export const AppShell: React.FC<{ children: React.ReactNode }> = ({ children }) => {
+export const AppShell: React.FC<{
+  children: React.ReactNode;
+  onNavigateLanding?: () => void;
+}> = ({ children, onNavigateLanding }) => {
   const activeSection = useAppStore((s) => s.activeSection);
   const setActiveSection = useAppStore((s) => s.setActiveSection);
   const exchange = useAppStore((s) => s.exchange);
@@ -303,8 +311,26 @@ export const AppShell: React.FC<{ children: React.ReactNode }> = ({ children }) 
           </nav>
         </div>
 
-        {/* Bottom Pinned Settings + Market Feed Status */}
-        <div className="p-3 border-t border-white/[0.08] space-y-2 shrink-0">
+        {/* Bottom Pinned Landing + Settings + Market Feed Status */}
+        <div className="p-3 border-t border-white/[0.08] space-y-1.5 shrink-0">
+          {onNavigateLanding && (
+            <button
+              type="button"
+              onClick={() => {
+                onSelect?.();
+                onNavigateLanding();
+              }}
+              title={isCompact ? 'Landing Page' : undefined}
+              className={`relative w-full flex items-center gap-2.5 px-2.5 py-2 rounded-xl text-[13px] transition-all whitespace-nowrap text-[#8FA497] hover:bg-white/[0.05] hover:text-white font-medium ${
+                isCompact ? 'justify-center px-0' : ''
+              }`}
+            >
+              <span className="w-7 h-7 rounded-lg flex items-center justify-center shrink-0 bg-white/[0.06] text-[#9BB0A3]">
+                <Globe className="w-[15px] h-[15px]" />
+              </span>
+              {!isCompact && <span>Landing Page</span>}
+            </button>
+          )}
           <button
             type="button"
             onClick={() => {
@@ -490,6 +516,9 @@ export const AppShell: React.FC<{ children: React.ReactNode }> = ({ children }) 
             >
               <Search className="w-4 h-4" />
             </button>
+
+            {/* Google OAuth Sign In / Profile */}
+            <GoogleAuthButton compact />
 
             {/* Notification Bell */}
             <div className="relative">

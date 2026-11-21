@@ -1,8 +1,12 @@
 import type { Server as HttpServer } from 'node:http';
 import { WebSocket, WebSocketServer } from 'ws';
-import { CORE_UNIVERSE_BASES } from '../shared/constants';
+import { CORE_UNIVERSE_BASES, EXCHANGE_TIMEFRAMES } from '../shared/constants';
 import type { Candle, ExchangeId, Timeframe } from '../shared/types';
 import { updateWsProviderHealth } from './providers';
+
+const VALID_EXCHANGES = new Set<ExchangeId>(['binance', 'bybit', 'kraken', 'coinbase', 'stocks', 'cfds']);
+const VALID_BINANCE_TFS = new Set<Timeframe>(EXCHANGE_TIMEFRAMES.binance);
+const SAFE_BINANCE_SYMBOL_RE = /^[A-Z0-9]{4,18}$/;
 
 interface ClientSub {
   ws: WebSocket;
@@ -18,12 +22,24 @@ export class MarketWebSocketHub {
   private binanceKlineWs: WebSocket | null = null;
   private bybitLinearWs: WebSocket | null = null;
   private activeBinanceKlineStream = 'btcusdt@kline_15m';
-  private reconnectTimers: NodeJS.Timeout[] = [];
+  private reconnectTimers = new Set<NodeJS.Timeout>();
   private heartbeatTimer: NodeJS.Timeout | null = null;
   private lastBroadcastPrices = new Map<string, number>();
 
+  private scheduleReconnect(fn: () => void, delayMs: number): void {
+    const t = setTimeout(() => {
+      this.reconnectTimers.delete(t);
+      fn();
+    }, delayMs);
+    this.reconnectTimers.add(t);
+  }
+
   public attach(httpServer: HttpServer): void {
-    this.wss = new WebSocketServer({ server: httpServer, path: '/ws' });
+    this.wss = new WebSocketServer({
+      server: httpServer,
+      path: '/ws',
+      maxPayload: 16 * 1024, // 16 KB guard against oversized WS frames
+    });
 
     this.wss.on('connection', (ws) => {
       const sub: ClientSub = {
@@ -50,11 +66,23 @@ export class MarketWebSocketHub {
             exchange?: ExchangeId;
             timeframe?: Timeframe;
           };
-          if (msg.type === 'subscribe' && msg.symbol && msg.timeframe) {
-            sub.symbol = msg.symbol.replace('/', '').toUpperCase();
-            sub.exchange = msg.exchange ?? 'binance';
-            sub.timeframe = msg.timeframe;
-            this.ensureBinanceKlineStream(sub.symbol, sub.timeframe);
+          if (msg.type === 'subscribe' && typeof msg.symbol === 'string' && typeof msg.timeframe === 'string') {
+            const exchange: ExchangeId =
+              msg.exchange && VALID_EXCHANGES.has(msg.exchange) ? msg.exchange : 'binance';
+            const cleanSymbol = msg.symbol.replace('/', '').trim().toUpperCase();
+            sub.exchange = exchange;
+            sub.symbol = cleanSymbol;
+            if (VALID_BINANCE_TFS.has(msg.timeframe as Timeframe)) {
+              sub.timeframe = msg.timeframe as Timeframe;
+            }
+            // Only open/switch Binance kline stream for valid Binance crypto pairs
+            if (
+              exchange === 'binance' &&
+              SAFE_BINANCE_SYMBOL_RE.test(cleanSymbol) &&
+              VALID_BINANCE_TFS.has(sub.timeframe)
+            ) {
+              this.ensureBinanceKlineStream(cleanSymbol, sub.timeframe);
+            }
           }
         } catch {
           // ignore malformed client frame
@@ -87,6 +115,7 @@ export class MarketWebSocketHub {
   }
 
   private ensureBinanceKlineStream(symbol: string, timeframe: Timeframe): void {
+    if (!SAFE_BINANCE_SYMBOL_RE.test(symbol) || !VALID_BINANCE_TFS.has(timeframe)) return;
     const stream = `${symbol.toLowerCase()}@kline_${timeframe}`;
     if (stream === this.activeBinanceKlineStream && this.binanceKlineWs?.readyState === WebSocket.OPEN) {
       return;
@@ -160,8 +189,7 @@ export class MarketWebSocketHub {
       ws.on('close', () => {
         updateWsProviderHealth('binance', false);
         const delay = Math.min(30_000, 1500 * Math.pow(2, Math.min(attempt, 5)));
-        const t = setTimeout(() => this.connectBinanceMiniTickers(attempt + 1), delay);
-        this.reconnectTimers.push(t);
+        this.scheduleReconnect(() => this.connectBinanceMiniTickers(attempt + 1), delay);
       });
 
       ws.on('error', () => {
@@ -223,8 +251,7 @@ export class MarketWebSocketHub {
       ws.on('close', () => {
         if (this.activeBinanceKlineStream !== stream) return;
         const delay = Math.min(30_000, 2000 * Math.pow(2, Math.min(attempt, 4)));
-        const t = setTimeout(() => this.connectBinanceKline(stream, attempt + 1), delay);
-        this.reconnectTimers.push(t);
+        this.scheduleReconnect(() => this.connectBinanceKline(stream, attempt + 1), delay);
       });
 
       ws.on('error', () => {
@@ -281,8 +308,7 @@ export class MarketWebSocketHub {
       ws.on('close', () => {
         updateWsProviderHealth('bybit', false);
         const delay = Math.min(30_000, 2000 * Math.pow(2, Math.min(attempt, 5)));
-        const t = setTimeout(() => this.connectBybitLinearTickers(attempt + 1), delay);
-        this.reconnectTimers.push(t);
+        this.scheduleReconnect(() => this.connectBybitLinearTickers(attempt + 1), delay);
       });
 
       ws.on('error', () => {
@@ -296,6 +322,7 @@ export class MarketWebSocketHub {
   public dispose(): void {
     if (this.heartbeatTimer) clearInterval(this.heartbeatTimer);
     this.reconnectTimers.forEach((t) => clearTimeout(t));
+    this.reconnectTimers.clear();
     this.binanceTickerWs?.close();
     this.binanceKlineWs?.close();
     this.bybitLinearWs?.close();

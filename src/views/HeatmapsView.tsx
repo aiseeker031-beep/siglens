@@ -56,6 +56,10 @@ export const HeatmapsView: React.FC = () => {
   };
 
   useEffect(() => {
+    setExchange(globalExchange);
+  }, [globalExchange]);
+
+  useEffect(() => {
     loadData();
   }, [exchange, timeframe, corrLookback]);
 

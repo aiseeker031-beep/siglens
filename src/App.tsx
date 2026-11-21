@@ -1,23 +1,66 @@
-import React, { Suspense, lazy, useEffect } from 'react';
+import React, { Suspense, lazy, useCallback, useEffect, useState } from 'react';
 import { AnimatePresence, MotionConfig, motion } from 'motion/react';
 import { AppShell } from './components/layout/AppShell';
 import { CommandSearchModal } from './components/layout/CommandSearchModal';
 import { KINETIC_EASE } from './components/ui/Kinetic';
 import { SkeletonBlock } from './components/ui/SignalMeter';
 import { useMarketStream } from './hooks/useMarketStream';
+import type { ExchangeId, MarketType, NavSection } from './shared/types';
 import { useAppStore } from './store/useAppStore';
 
-import { OverviewView } from './views/OverviewView';
-import { MarketsView } from './views/MarketsView';
-import { LiveSignalsView } from './views/LiveSignalsView';
-import { ScreenerView } from './views/ScreenerView';
-import { AIResearchView } from './views/AIResearchView';
-import { PaperArenaView } from './views/PaperArenaView';
-import { SettingsView } from './views/SettingsView';
+import { LandingPage } from './views/LandingPage';
 
+const OverviewView = lazy(() =>
+  import('./views/OverviewView').then((m) => ({ default: m.OverviewView })),
+);
+const MarketsView = lazy(() =>
+  import('./views/MarketsView').then((m) => ({ default: m.MarketsView })),
+);
+const LiveSignalsView = lazy(() =>
+  import('./views/LiveSignalsView').then((m) => ({ default: m.LiveSignalsView })),
+);
+const ScreenerView = lazy(() =>
+  import('./views/ScreenerView').then((m) => ({ default: m.ScreenerView })),
+);
+const ArbitrageView = lazy(() =>
+  import('./views/ArbitrageView').then((m) => ({ default: m.ArbitrageView })),
+);
+const AIResearchView = lazy(() =>
+  import('./views/AIResearchView').then((m) => ({ default: m.AIResearchView })),
+);
+const PaperArenaView = lazy(() =>
+  import('./views/PaperArenaView').then((m) => ({ default: m.PaperArenaView })),
+);
+const SettingsView = lazy(() =>
+  import('./views/SettingsView').then((m) => ({ default: m.SettingsView })),
+);
 const HeatmapsView = lazy(() =>
   import('./views/HeatmapsView').then((m) => ({ default: m.HeatmapsView })),
 );
+
+type RouteMode = 'landing' | 'app';
+
+function readRouteModeFromLocation(): RouteMode {
+  if (typeof window === 'undefined') return 'landing';
+  return window.location.pathname.startsWith('/app') ? 'app' : 'landing';
+}
+
+function readAuthErrorFromLocation(): string | null {
+  if (typeof window === 'undefined') return null;
+  const params = new URLSearchParams(window.location.search);
+  const code = params.get('auth_error');
+  if (!code) return null;
+  if (code === 'google_not_configured') {
+    return 'Google OAuth credentials (GOOGLE_CLIENT_ID & GOOGLE_CLIENT_SECRET) are not configured on the server yet. Click "Continue with Google" to view the 2-step cPanel setup guide.';
+  }
+  if (code === 'invalid_state') {
+    return 'Google sign-in session expired or state mismatch. Please try signing in again.';
+  }
+  if (code === 'oauth_exchange_failed') {
+    return 'Google sign-in token exchange failed. Verify your Authorized Redirect URI in Google Cloud Console.';
+  }
+  return `Google sign-in returned: ${code}`;
+}
 
 class ViewErrorBoundary extends React.Component<
   { children: React.ReactNode; resetKey: string },
@@ -69,8 +112,13 @@ const ViewSuspenseFallback: React.FC = () => (
 
 export function App() {
   const activeSection = useAppStore((s) => s.activeSection);
+  const setActiveSection = useAppStore((s) => s.setActiveSection);
+  const selectMarket = useAppStore((s) => s.selectMarket);
   const hydrateFromServer = useAppStore((s) => s.hydrateFromServer);
   const setCommandSearchOpen = useAppStore((s) => s.setCommandSearchOpen);
+
+  const [routeMode, setRouteMode] = useState<RouteMode>(() => readRouteModeFromLocation());
+  const [authNotice, setAuthNotice] = useState<string | null>(() => readAuthErrorFromLocation());
 
   useMarketStream();
 
@@ -79,7 +127,16 @@ export function App() {
   }, [hydrateFromServer]);
 
   useEffect(() => {
+    const onPopState = () => {
+      setRouteMode(readRouteModeFromLocation());
+    };
+    window.addEventListener('popstate', onPopState);
+    return () => window.removeEventListener('popstate', onPopState);
+  }, []);
+
+  useEffect(() => {
     const onKeyDown = (e: KeyboardEvent) => {
+      if (routeMode !== 'app') return;
       if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === 'k') {
         e.preventDefault();
         const cur = useAppStore.getState().commandSearchOpen;
@@ -88,7 +145,44 @@ export function App() {
     };
     window.addEventListener('keydown', onKeyDown);
     return () => window.removeEventListener('keydown', onKeyDown);
-  }, [setCommandSearchOpen]);
+  }, [routeMode, setCommandSearchOpen]);
+
+  const navigateToApp = useCallback(
+    (section?: NavSection) => {
+      if (section) {
+        setActiveSection(section);
+      }
+      if (typeof window !== 'undefined' && !window.location.pathname.startsWith('/app')) {
+        window.history.pushState({}, '', '/app');
+      }
+      setRouteMode('app');
+      window.scrollTo({ top: 0, behavior: 'instant' as ScrollBehavior });
+    },
+    [setActiveSection],
+  );
+
+  const navigateToLanding = useCallback(() => {
+    if (typeof window !== 'undefined' && window.location.pathname !== '/') {
+      window.history.pushState({}, '', '/');
+    }
+    setRouteMode('landing');
+    window.scrollTo({ top: 0, behavior: 'instant' as ScrollBehavior });
+  }, []);
+
+  const handleInspectFromLanding = useCallback(
+    (exchange: ExchangeId, marketType: MarketType, symbol: string) => {
+      selectMarket(exchange, marketType, symbol, true);
+      navigateToApp('overview');
+    },
+    [selectMarket, navigateToApp],
+  );
+
+  const dismissAuthNotice = useCallback(() => {
+    setAuthNotice(null);
+    if (typeof window !== 'undefined' && window.location.search.includes('auth_error')) {
+      window.history.replaceState({}, '', window.location.pathname);
+    }
+  }, []);
 
   const renderSection = () => {
     switch (activeSection) {
@@ -102,6 +196,8 @@ export function App() {
         return <ScreenerView />;
       case 'heatmaps':
         return <HeatmapsView />;
+      case 'arbitrage':
+        return <ArbitrageView />;
       case 'arena':
         return <PaperArenaView />;
       case 'ai':
@@ -115,24 +211,33 @@ export function App() {
 
   return (
     <MotionConfig reducedMotion="user">
-      <AppShell>
-        <ViewErrorBoundary resetKey={activeSection}>
-          <Suspense fallback={<ViewSuspenseFallback />}>
+      {routeMode === 'landing' ? (
+        <LandingPage
+          onLaunchApp={navigateToApp}
+          onInspectAsset={handleInspectFromLanding}
+          authNotice={authNotice}
+          onDismissAuthNotice={dismissAuthNotice}
+        />
+      ) : (
+        <AppShell onNavigateLanding={navigateToLanding}>
+          <ViewErrorBoundary resetKey={activeSection}>
             <AnimatePresence mode="wait">
               <motion.div
                 key={activeSection}
                 initial={{ opacity: 0, y: 8 }}
                 animate={{ opacity: 1, y: 0 }}
                 exit={{ opacity: 0, y: -6 }}
-                transition={{ duration: 0.22, ease: KINETIC_EASE }}
+                transition={{ duration: 0.2, ease: KINETIC_EASE }}
               >
-                {renderSection()}
+                <Suspense fallback={<ViewSuspenseFallback />}>
+                  {renderSection()}
+                </Suspense>
               </motion.div>
             </AnimatePresence>
-          </Suspense>
-        </ViewErrorBoundary>
-        <CommandSearchModal />
-      </AppShell>
+          </ViewErrorBoundary>
+          <CommandSearchModal />
+        </AppShell>
+      )}
     </MotionConfig>
   );
 }

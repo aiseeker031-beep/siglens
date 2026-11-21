@@ -13,6 +13,7 @@ const QUICK_PAGES: { section: NavSection; label: string; hint: string }[] = [
   { section: 'signals', label: 'Live Signal Feed', hint: 'Real-time Entry, SL & TP1-TP3 setups' },
   { section: 'screener', label: 'Advanced Screener', hint: '20 executable presets & custom filters' },
   { section: 'heatmaps', label: 'Market Heatmaps', hint: 'Performance, correlation & breadth' },
+  { section: 'arbitrage', label: 'Real-Time Arbitrage Scanner', hint: 'Cross-exchange spot spreads & Stat-Arb Z-scores' },
   { section: 'arena', label: 'Autonomous Bot Arena', hint: 'Live paper-trading bots, equity curve & risk engine' },
   { section: 'ai', label: 'AI Insights', hint: 'Optional BYOK explainability & NL scan' },
   { section: 'settings', label: 'Settings & Diagnostics', hint: 'Weights, providers, alerts & BYOK' },
@@ -29,11 +30,9 @@ export const CommandSearchModal: React.FC = () => {
   const [loading, setLoading] = useState(false);
 
   useEffect(() => {
+    if (!open) return;
     const onKeyDown = (e: KeyboardEvent) => {
-      if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === 'k') {
-        e.preventDefault();
-        setOpen(!open);
-      } else if (e.key === 'Escape' && open) {
+      if (e.key === 'Escape') {
         setOpen(false);
       }
     };

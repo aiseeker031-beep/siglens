@@ -978,8 +978,9 @@ export async function fetchOrderBook(
       displaySymbol,
       bids: [],
       asks: [],
-      midPrice: 0,
-      spreadPct: 0,
+      bestBid: null,
+      bestAsk: null,
+      spreadPct: null,
       timestamp: Date.now(),
       source: 'L2 order book depth is unavailable for public equity/CFD feeds',
     };

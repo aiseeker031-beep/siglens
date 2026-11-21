@@ -55,6 +55,11 @@ export const LiveSignalsView: React.FC = () => {
   };
 
   useEffect(() => {
+    setExchange(globalExchange);
+    setMarketType(globalMarketType);
+  }, [globalExchange, globalMarketType]);
+
+  useEffect(() => {
     loadData(false);
     const t = window.setInterval(() => loadData(false), 30_000);
     return () => window.clearInterval(t);

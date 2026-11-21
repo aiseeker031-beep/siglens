@@ -2,6 +2,7 @@ import { create } from 'zustand';
 import { DEFAULT_PREFERENCES, DEFAULT_WATCHLIST_MARKETS, EXCHANGE_MARKET_TYPES, EXCHANGE_TIMEFRAMES } from '../shared/constants';
 import type {
   AlertEventRecord,
+  AuthStateResponse,
   Candle,
   DataFreshness,
   ExchangeId,
@@ -39,6 +40,7 @@ interface AppState {
   commandSearchOpen: boolean;
   mobileNavOpen: boolean;
   initialized: boolean;
+  auth: AuthStateResponse | null;
 
   setActiveSection: (section: NavSection) => void;
   selectMarket: (exchange: ExchangeId, marketType: MarketType, symbol: string, openOverview?: boolean) => void;
@@ -48,6 +50,8 @@ interface AppState {
   setCommandSearchOpen: (open: boolean) => void;
   setMobileNavOpen: (open: boolean) => void;
   hydrateFromServer: () => Promise<void>;
+  fetchAuthState: () => Promise<AuthStateResponse | null>;
+  logoutAuth: () => Promise<void>;
   updatePreferences: (patch: Partial<UserPreferences>) => Promise<void>;
   toggleWatchlist: (canonicalId: string) => Promise<void>;
   reorderWatchlist: (items: string[]) => Promise<void>;
@@ -82,6 +86,7 @@ export const useAppStore = create<AppState>((set, get) => ({
   commandSearchOpen: false,
   mobileNavOpen: false,
   initialized: false,
+  auth: null,
 
   setActiveSection: (section) => set({ activeSection: section, mobileNavOpen: false }),
 
@@ -141,10 +146,11 @@ export const useAppStore = create<AppState>((set, get) => ({
 
   hydrateFromServer: async () => {
     try {
-      const [settingsRes, wlRes, alertsRes] = await Promise.all([
+      const [settingsRes, wlRes, alertsRes, authRes] = await Promise.all([
         api.getSettings().catch(() => null),
         api.getWatchlist().catch(() => null),
         api.getAlerts().catch(() => null),
+        api.getAuthState().catch(() => null),
       ]);
       const prefs: UserPreferences = {
         ...(settingsRes?.preferences ?? DEFAULT_PREFERENCES),
@@ -159,12 +165,34 @@ export const useAppStore = create<AppState>((set, get) => ({
         timeframe: prefs.defaultTimeframe || '15m',
         watchlist: wlRes?.items ?? DEFAULT_WATCHLIST_MARKETS,
         notifications: alertsRes?.events?.slice(0, 15) ?? [],
+        auth: authRes,
         initialized: true,
       });
     } catch {
       applyThemeToDom('light');
       set({ initialized: true });
     }
+  },
+
+  fetchAuthState: async () => {
+    try {
+      const auth = await api.getAuthState();
+      set({ auth });
+      return auth;
+    } catch {
+      return null;
+    }
+  },
+
+  logoutAuth: async () => {
+    try {
+      await api.logoutAuth();
+    } catch {
+      // ignore network error on sign-out
+    }
+    set((s) => ({
+      auth: s.auth ? { ...s.auth, user: null } : null,
+    }));
   },
 
   updatePreferences: async (patch) => {

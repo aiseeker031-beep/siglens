@@ -72,22 +72,118 @@ import {
   updatePaperBot,
 } from './src/server/paperEngine';
 import { wsHub } from './src/server/wsHub';
+import { scanLiveArbitrage } from './src/server/arbitrage';
+import { assertSafeExternalUrlSync } from './src/server/ssrf';
+import {
+  buildAuthStateResponse,
+  buildGoogleAuthUrl,
+  createOAuthState,
+  deleteSessionFromReq,
+  ensureAuthTables,
+  exchangeGoogleCodeAndCreateSession,
+  getGoogleCallbackUrl,
+  isGoogleOAuthConfigured,
+  isSecureRequest,
+  parseCookies,
+  serializeCookie,
+  SESSION_COOKIE,
+  STATE_COOKIE,
+} from './src/server/auth';
 
 const PORT = Number(process.env.PORT || 3000);
 const IS_PROD = process.env.NODE_ENV === 'production';
 
 const exchangeSchema = z.enum(['binance', 'bybit', 'kraken', 'coinbase', 'stocks', 'cfds']);
+const exchangeOrAllSchema = z.enum(['binance', 'bybit', 'kraken', 'coinbase', 'stocks', 'cfds', 'all']);
 const marketTypeSchema = z.enum(['spot', 'perpetual', 'equity', 'cfd']);
+const marketTypeOrAllSchema = z.enum(['spot', 'perpetual', 'equity', 'cfd', 'all']);
 const timeframeSchema = z.enum(['1m', '3m', '5m', '15m', '30m', '1h', '2h', '4h', '6h', '12h', '1d', '1w']);
 
-function buildApiRouter(): express.Router {
+const preferencesPatchSchema = z
+  .object({
+    theme: z.enum(['dark', 'light', 'system']).optional(),
+    timezone: z.enum(['UTC', 'local']).optional(),
+    decimalPrecision: z.union([z.literal('auto'), z.literal(2), z.literal(4), z.literal(6)]).optional(),
+    defaultExchange: exchangeSchema.optional(),
+    defaultMarketType: marketTypeSchema.optional(),
+    defaultPair: z.string().min(3).max(24).optional(),
+    defaultTimeframe: timeframeSchema.optional(),
+    denseMode: z.boolean().optional(),
+    sidebarCollapsed: z.boolean().optional(),
+    defaultChartMode: z.enum(['2d', '3d']).optional(),
+    showLiveProvisional: z.boolean().optional(),
+    reducedMotion: z.boolean().optional(),
+    weights: z
+      .object({
+        ema: z.number().min(0).max(100).optional(),
+        macd: z.number().min(0).max(100).optional(),
+        rsi: z.number().min(0).max(100).optional(),
+        adx: z.number().min(0).max(100).optional(),
+        bollinger: z.number().min(0).max(100).optional(),
+        stochRsi: z.number().min(0).max(100).optional(),
+        obv: z.number().min(0).max(100).optional(),
+        vwap: z.number().min(0).max(100).optional(),
+        rvol: z.number().min(0).max(100).optional(),
+      })
+      .strict()
+      .optional(),
+    thresholds: z
+      .object({
+        strongBullish: z.number().min(10).max(100).optional(),
+        bullish: z.number().min(1).max(95).optional(),
+        bearish: z.number().min(-95).max(-1).optional(),
+        strongBearish: z.number().min(-100).max(-10).optional(),
+      })
+      .strict()
+      .optional(),
+    minCoveragePct: z.number().min(10).max(100).optional(),
+    minAgreementForStrongPct: z.number().min(20).max(100).optional(),
+  })
+  .strict();
+
+export function buildApiRouter(): express.Router {
   const router = express.Router();
 
-  // Simple in-memory rate limit guard for mutation/AI routes
+  // Never cache dynamic/sensitive API responses in shared proxies or browsers
+  router.use((_req, res, next) => {
+    res.setHeader('Cache-Control', 'no-store');
+    next();
+  });
+
+  // Same-Origin CSRF guard on state-changing routes when Origin header is present
+  router.use((req, res, next) => {
+    if (req.method === 'GET' || req.method === 'HEAD' || req.method === 'OPTIONS') {
+      return next();
+    }
+    const origin = req.headers.origin;
+    if (origin) {
+      try {
+        const originHost = new URL(origin).host.toLowerCase();
+        const requestHost = String(req.headers['x-forwarded-host'] || req.get('host') || '')
+          .split(',')[0]
+          .trim()
+          .toLowerCase();
+        const appUrlHost = process.env.APP_URL ? new URL(process.env.APP_URL).host.toLowerCase() : '';
+        if (originHost !== requestHost && (!appUrlHost || originHost !== appUrlHost)) {
+          return res.status(403).json({ error: 'Cross-origin state-changing request rejected.' });
+        }
+      } catch {
+        return res.status(403).json({ error: 'Invalid Origin header.' });
+      }
+    }
+    return next();
+  });
+
+  // Bounded in-memory rate limit guard for mutation/AI routes (prunes expired keys)
   const hits = new Map<string, { count: number; resetAt: number }>();
   const rateLimit = (maxPerMin: number): express.RequestHandler => (req, res, next) => {
-    const key = `${req.ip}:${req.path}`;
     const now = Date.now();
+    if (hits.size > 2000) {
+      for (const [k, v] of hits.entries()) {
+        if (now > v.resetAt) hits.delete(k);
+      }
+    }
+    const key = `${req.ip}:${req.path}`;
     const cur = hits.get(key);
     if (!cur || now > cur.resetAt) {
       hits.set(key, { count: 1, resetAt: now + 60_000 });
@@ -104,7 +200,7 @@ function buildApiRouter(): express.Router {
   router.get('/health', (_req, res) => {
     res.json({
       status: 'ok',
-      app: 'CRYPTOLENS',
+      app: 'SIGLENS',
       timestamp: Date.now(),
       providers: getProviderStatuses().map((p) => ({ id: p.id, status: p.status, wsConnected: p.wsConnected })),
     });
@@ -135,11 +231,18 @@ function buildApiRouter(): express.Router {
   });
 
   // --- Markets & Tickers ---
+  const marketsQuerySchema = z.object({
+    exchange: exchangeOrAllSchema.default('binance'),
+    marketType: marketTypeOrAllSchema.default('spot'),
+  });
+
   router.get('/markets', async (req, res) => {
+    const parsed = marketsQuerySchema.safeParse(req.query);
+    if (!parsed.success) {
+      return res.status(400).json({ error: 'Invalid exchange or marketType parameter' });
+    }
     try {
-      const exchange = (req.query.exchange as ExchangeId | 'all') || 'binance';
-      const marketType = (req.query.marketType as MarketType | 'all') || 'spot';
-      const tickers = await getMarketTickers(exchange, marketType);
+      const tickers = await getMarketTickers(parsed.data.exchange, parsed.data.marketType);
       res.json({ markets: tickers, count: tickers.length, timestamp: Date.now() });
     } catch (err) {
       res.status(502).json({ error: err instanceof Error ? err.message : 'Failed to load markets' });
@@ -147,10 +250,12 @@ function buildApiRouter(): express.Router {
   });
 
   router.get('/tickers', async (req, res) => {
+    const parsed = marketsQuerySchema.safeParse(req.query);
+    if (!parsed.success) {
+      return res.status(400).json({ error: 'Invalid exchange or marketType parameter' });
+    }
     try {
-      const exchange = (req.query.exchange as ExchangeId | 'all') || 'binance';
-      const marketType = (req.query.marketType as MarketType | 'all') || 'spot';
-      const tickers = await getMarketTickers(exchange, marketType);
+      const tickers = await getMarketTickers(parsed.data.exchange, parsed.data.marketType);
       res.json({ tickers, count: tickers.length, timestamp: Date.now() });
     } catch (err) {
       res.status(502).json({ error: err instanceof Error ? err.message : 'Failed to fetch tickers' });
@@ -266,8 +371,10 @@ function buildApiRouter(): express.Router {
   }
 
   router.get('/signals/current', async (req, res) => {
+    const check = assetQuerySchema.safeParse(req.query);
+    if (!check.success) return res.status(400).json({ error: 'Invalid query parameters' });
     try {
-      const bundle = await computeAssetBundle(req.query as Record<string, unknown>);
+      const bundle = await computeAssetBundle(check.data);
       res.json({
         canonicalId: bundle.canonicalId,
         source: bundle.source,
@@ -281,8 +388,10 @@ function buildApiRouter(): express.Router {
   });
 
   router.get('/indicators', async (req, res) => {
+    const check = assetQuerySchema.safeParse(req.query);
+    if (!check.success) return res.status(400).json({ error: 'Invalid query parameters' });
     try {
-      const bundle = await computeAssetBundle(req.query as Record<string, unknown>);
+      const bundle = await computeAssetBundle(check.data);
       res.json({
         canonicalId: bundle.canonicalId,
         source: bundle.source,
@@ -295,8 +404,10 @@ function buildApiRouter(): express.Router {
   });
 
   router.get('/patterns', async (req, res) => {
+    const check = assetQuerySchema.safeParse(req.query);
+    if (!check.success) return res.status(400).json({ error: 'Invalid query parameters' });
     try {
-      const bundle = await computeAssetBundle(req.query as Record<string, unknown>);
+      const bundle = await computeAssetBundle(check.data);
       res.json({
         canonicalId: bundle.canonicalId,
         patterns: bundle.analysis.patterns,
@@ -308,8 +419,10 @@ function buildApiRouter(): express.Router {
   });
 
   router.get('/market-regime', async (req, res) => {
+    const check = assetQuerySchema.safeParse(req.query);
+    if (!check.success) return res.status(400).json({ error: 'Invalid query parameters' });
     try {
-      const bundle = await computeAssetBundle(req.query as Record<string, unknown>);
+      const bundle = await computeAssetBundle(check.data);
       res.json({ canonicalId: bundle.canonicalId, regime: bundle.analysis.confirmed.regime });
     } catch (err) {
       res.status(502).json({ error: err instanceof Error ? err.message : 'Regime classification failed' });
@@ -317,8 +430,10 @@ function buildApiRouter(): express.Router {
   });
 
   router.get('/signals/explain', async (req, res) => {
+    const check = assetQuerySchema.safeParse(req.query);
+    if (!check.success) return res.status(400).json({ error: 'Invalid query parameters' });
     try {
-      const bundle = await computeAssetBundle(req.query as Record<string, unknown>);
+      const bundle = await computeAssetBundle(check.data);
       const c = bundle.analysis.confirmed;
       res.json({
         canonicalId: bundle.canonicalId,
@@ -485,14 +600,24 @@ function buildApiRouter(): express.Router {
   });
 
   // --- Screener & Presets ---
+  const screenerQuerySchema = z.object({
+    exchange: exchangeSchema.default('binance'),
+    marketType: marketTypeSchema.optional(),
+    timeframe: timeframeSchema.default('1h'),
+    refresh: z.string().optional(),
+    presetId: z.string().optional(),
+  });
+
   router.get('/screener', async (req, res) => {
+    const parsed = screenerQuerySchema.safeParse(req.query);
+    if (!parsed.success) return res.status(400).json({ error: 'Invalid screener query parameters' });
     try {
-      const exchange = (req.query.exchange as ExchangeId) || 'binance';
-      const marketType = (req.query.marketType as MarketType) || 'spot';
-      const timeframe = (req.query.timeframe as Timeframe) || '1h';
-      const force = req.query.refresh === 'true';
+      const exchange = parsed.data.exchange;
+      const marketType = parsed.data.marketType ?? defaultMarketTypeFor(exchange);
+      const timeframe = parsed.data.timeframe;
+      const force = parsed.data.refresh === 'true';
       const scan = await runScreenerScan(exchange, marketType, timeframe, force);
-      const presetId = req.query.presetId ? String(req.query.presetId) : undefined;
+      const presetId = parsed.data.presetId;
       const rows = presetId ? filterScreenerRows(scan.rows, { presetId }) : scan.rows;
       res.json({
         rows,
@@ -540,9 +665,15 @@ function buildApiRouter(): express.Router {
 
   // --- Market Overview & Market Breadth ---
   router.get('/market-breadth', async (req, res) => {
+    const parsed = z
+      .object({
+        exchange: exchangeSchema.default('binance'),
+        timeframe: timeframeSchema.default('1h'),
+      })
+      .safeParse(req.query);
+    if (!parsed.success) return res.status(400).json({ error: 'Invalid market breadth query parameters' });
     try {
-      const exchange = (req.query.exchange as ExchangeId) || 'binance';
-      const timeframe = (req.query.timeframe as Timeframe) || '1h';
+      const { exchange, timeframe } = parsed.data;
       const scan = await runScreenerScan(exchange, defaultMarketTypeFor(exchange), timeframe, false);
       const breadth = computeMarketBreadth(scan.rows);
       res.json({
@@ -557,9 +688,16 @@ function buildApiRouter(): express.Router {
   });
 
   router.get('/market-overview', async (req, res) => {
+    const parsed = z
+      .object({
+        exchange: exchangeSchema.default('binance'),
+        marketType: marketTypeSchema.optional(),
+      })
+      .safeParse(req.query);
+    if (!parsed.success) return res.status(400).json({ error: 'Invalid market overview query parameters' });
     try {
-      const exchange = (req.query.exchange as ExchangeId) || 'binance';
-      const marketType = (req.query.marketType as MarketType) || defaultMarketTypeFor(exchange);
+      const exchange = parsed.data.exchange;
+      const marketType = parsed.data.marketType ?? defaultMarketTypeFor(exchange);
       const [tickers, fng, scan] = await Promise.all([
         getMarketTickers(exchange, marketType),
         fetchFearAndGreed(),
@@ -670,11 +808,20 @@ function buildApiRouter(): express.Router {
 
   // --- Correlation & Multi-Asset Comparison ---
   router.get('/correlation', async (req, res) => {
+    const parsed = z
+      .object({
+        symbols: z.string().optional(),
+        exchange: exchangeSchema.default('binance'),
+        timeframe: timeframeSchema.default('1h'),
+        lookback: z.coerce.number().int().min(20).max(180).default(60),
+      })
+      .safeParse(req.query);
+    if (!parsed.success) return res.status(400).json({ error: 'Invalid correlation query parameters' });
     try {
-      const symbolsParam = String(req.query.symbols || 'BTC/USDT,ETH/USDT,SOL/USDT,XRP/USDT,BNB/USDT,LINK/USDT,AVAX/USDT,DOGE/USDT');
-      const exchange = (req.query.exchange as ExchangeId) || 'binance';
-      const timeframe = (req.query.timeframe as Timeframe) || '1h';
-      const lookback = Math.min(Math.max(Number(req.query.lookback || 60), 20), 180);
+      const symbolsParam =
+        parsed.data.symbols ||
+        'BTC/USDT,ETH/USDT,SOL/USDT,XRP/USDT,BNB/USDT,LINK/USDT,AVAX/USDT,DOGE/USDT';
+      const { exchange, timeframe, lookback } = parsed.data;
       const symbols = symbolsParam
         .split(',')
         .map((s) => s.trim().toUpperCase())
@@ -696,11 +843,20 @@ function buildApiRouter(): express.Router {
   });
 
   router.get('/compare', async (req, res) => {
+    const parsed = z
+      .object({
+        symbols: z.string().optional(),
+        exchange: exchangeSchema.default('binance'),
+        marketType: marketTypeSchema.optional(),
+        timeframe: timeframeSchema.default('1h'),
+      })
+      .safeParse(req.query);
+    if (!parsed.success) return res.status(400).json({ error: 'Invalid comparison query parameters' });
     try {
-      const symbolsParam = String(req.query.symbols || 'BTC/USDT,ETH/USDT,SOL/USDT');
-      const exchange = (req.query.exchange as ExchangeId) || 'binance';
-      const marketType = (req.query.marketType as MarketType) || 'spot';
-      const timeframe = (req.query.timeframe as Timeframe) || '1h';
+      const symbolsParam = parsed.data.symbols || 'BTC/USDT,ETH/USDT,SOL/USDT';
+      const exchange = parsed.data.exchange;
+      const marketType = parsed.data.marketType ?? defaultMarketTypeFor(exchange);
+      const timeframe = parsed.data.timeframe;
       const symbols = symbolsParam
         .split(',')
         .map((s) => s.trim().toUpperCase())
@@ -819,6 +975,16 @@ function buildApiRouter(): express.Router {
     const parsed = schema.safeParse(req.body);
     if (!parsed.success) return res.status(400).json({ error: 'Invalid alert rule payload' });
 
+    if (parsed.data.webhookUrl) {
+      try {
+        assertSafeExternalUrlSync(parsed.data.webhookUrl, { allowHttpLocalhost: false });
+      } catch (err) {
+        return res.status(400).json({
+          error: err instanceof Error ? err.message : 'Invalid or unsafe webhook URL',
+        });
+      }
+    }
+
     const meta = parseCanonicalId(parsed.data.canonicalId);
     const rule: AlertRule = {
       id: `alert-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`,
@@ -840,16 +1006,35 @@ function buildApiRouter(): express.Router {
     res.status(201).json({ rule });
   });
 
-  router.patch('/alerts/:id', (req, res) => {
+  router.patch('/alerts/:id', rateLimit(30), (req, res) => {
+    const patchSchema = z
+      .object({
+        enabled: z.boolean().optional(),
+        threshold: z.number().finite().nullable().optional(),
+        cooldownMinutes: z.number().int().min(1).max(1440).optional(),
+        webhookUrl: z.string().url().nullable().optional(),
+      })
+      .strict();
+    const parsed = patchSchema.safeParse(req.body);
+    if (!parsed.success) return res.status(400).json({ error: 'Invalid alert update payload' });
+    if (parsed.data.webhookUrl) {
+      try {
+        assertSafeExternalUrlSync(parsed.data.webhookUrl, { allowHttpLocalhost: false });
+      } catch (err) {
+        return res.status(400).json({
+          error: err instanceof Error ? err.message : 'Invalid or unsafe webhook URL',
+        });
+      }
+    }
     const rules = listAlertRules();
     const existing = rules.find((r) => r.id === req.params.id);
     if (!existing) return res.status(404).json({ error: 'Alert not found' });
     const updated: AlertRule = {
       ...existing,
-      enabled: typeof req.body.enabled === 'boolean' ? req.body.enabled : existing.enabled,
-      threshold: req.body.threshold !== undefined ? req.body.threshold : existing.threshold,
-      cooldownMinutes:
-        typeof req.body.cooldownMinutes === 'number' ? req.body.cooldownMinutes : existing.cooldownMinutes,
+      enabled: parsed.data.enabled ?? existing.enabled,
+      threshold: parsed.data.threshold !== undefined ? parsed.data.threshold : existing.threshold,
+      cooldownMinutes: parsed.data.cooldownMinutes ?? existing.cooldownMinutes,
+      webhookUrl: parsed.data.webhookUrl !== undefined ? parsed.data.webhookUrl : existing.webhookUrl,
     };
     upsertAlertRule(updated);
     res.json({ rule: updated });
@@ -866,12 +1051,16 @@ function buildApiRouter(): express.Router {
   });
 
   router.put('/settings', rateLimit(60), (req, res) => {
+    const parsed = preferencesPatchSchema.safeParse(req.body);
+    if (!parsed.success) {
+      return res.status(400).json({ error: 'Invalid preferences payload' });
+    }
     const current = getStoredPreferences();
     const next = {
       ...current,
-      ...req.body,
-      weights: { ...current.weights, ...(req.body?.weights ?? {}) },
-      thresholds: { ...current.thresholds, ...(req.body?.thresholds ?? {}) },
+      ...parsed.data,
+      weights: { ...current.weights, ...(parsed.data.weights ?? {}) },
+      thresholds: { ...current.thresholds, ...(parsed.data.thresholds ?? {}) },
     };
     saveStoredPreferences(next);
     res.json({ preferences: next });
@@ -1182,17 +1371,170 @@ function buildApiRouter(): express.Router {
     res.json({ snapshot });
   });
 
+  // --- Real-Time Arbitrage Scanner (Cross-Exchange Spot + Multi-Asset Stat-Arb Z-Score) ---
+  router.get('/arbitrage', async (req, res) => {
+    const parsed = z
+      .object({
+        feeBps: z.coerce.number().min(0).max(200).default(20),
+      })
+      .safeParse(req.query);
+    if (!parsed.success) {
+      return res.status(400).json({ error: 'Invalid feeBps parameter (expected 0 to 200)' });
+    }
+    try {
+      const payload = await scanLiveArbitrage(parsed.data.feeBps);
+      res.json(payload);
+    } catch (err) {
+      res.status(502).json({
+        error: err instanceof Error ? err.message : 'Live arbitrage scan failed',
+      });
+    }
+  });
+
+  // --- Google OAuth 2.0 Authentication ---
+  router.get('/auth/me', (req, res) => {
+    res.json(buildAuthStateResponse(req));
+  });
+
+  router.get('/auth/google', (req, res) => {
+    if (!isGoogleOAuthConfigured()) {
+      if (req.query.format === 'json') {
+        return res.status(503).json({
+          error: 'Google OAuth is not configured on the server.',
+          callbackUrl: getGoogleCallbackUrl(req),
+          requiredEnvVars: ['GOOGLE_CLIENT_ID', 'GOOGLE_CLIENT_SECRET'],
+        });
+      }
+      return res.redirect('/?auth_error=google_not_configured');
+    }
+    const state = createOAuthState();
+    res.setHeader(
+      'Set-Cookie',
+      serializeCookie(STATE_COOKIE, state, {
+        maxAgeSeconds: 600,
+        httpOnly: true,
+        secure: isSecureRequest(req),
+        sameSite: 'Lax',
+      }),
+    );
+    return res.redirect(buildGoogleAuthUrl(req, state));
+  });
+
+  router.get('/auth/google/callback', async (req, res) => {
+    const code = String(req.query.code || '');
+    const state = String(req.query.state || '');
+    const error = String(req.query.error || '');
+
+    if (error) {
+      return res.redirect(`/?auth_error=${encodeURIComponent(error)}`);
+    }
+
+    const cookies = parseCookies(req);
+    const expectedState = cookies[STATE_COOKIE];
+    if (!code || !state || !expectedState || state !== expectedState) {
+      return res.redirect('/?auth_error=invalid_state');
+    }
+
+    try {
+      const redirectUri = getGoogleCallbackUrl(req);
+      const { sessionToken } = await exchangeGoogleCodeAndCreateSession(code, redirectUri);
+      const secure = isSecureRequest(req);
+      res.setHeader('Set-Cookie', [
+        serializeCookie(STATE_COOKIE, '', { maxAgeSeconds: 0, httpOnly: true, secure, sameSite: 'Lax' }),
+        serializeCookie(SESSION_COOKIE, sessionToken, {
+          maxAgeSeconds: 14 * 24 * 60 * 60,
+          httpOnly: true,
+          secure,
+          sameSite: 'Lax',
+        }),
+      ]);
+      return res.redirect('/app');
+    } catch (err) {
+      console.error('[SIGLENS AUTH] Google callback failed:', err);
+      return res.redirect('/?auth_error=oauth_exchange_failed');
+    }
+  });
+
+  router.post('/auth/logout', (req, res) => {
+    deleteSessionFromReq(req);
+    res.setHeader(
+      'Set-Cookie',
+      serializeCookie(SESSION_COOKIE, '', {
+        maxAgeSeconds: 0,
+        httpOnly: true,
+        secure: isSecureRequest(req),
+        sameSite: 'Lax',
+      }),
+    );
+    res.json({ ok: true });
+  });
+
+  // Catch-all JSON 404 for unknown /api/* paths so SPA fallback never returns 200 HTML for missing API routes
+  router.use((_req, res) => {
+    res.status(404).json({ error: 'API route not found' });
+  });
+
   return router;
+}
+
+export function createApp(): express.Express {
+  const app = express();
+  app.disable('x-powered-by');
+  app.set('trust proxy', 1);
+
+  // Production security headers middleware (OWASP ASVS aligned)
+  app.use((req, res, next) => {
+    res.setHeader('X-Content-Type-Options', 'nosniff');
+    res.setHeader('X-Frame-Options', 'DENY');
+    res.setHeader('Referrer-Policy', 'strict-origin-when-cross-origin');
+    res.setHeader('Permissions-Policy', 'camera=(), microphone=(), geolocation=(), payment=()');
+    if (isSecureRequest(req)) {
+      res.setHeader('Strict-Transport-Security', 'max-age=31536000; includeSubDomains');
+    }
+    res.setHeader(
+      'Content-Security-Policy',
+      [
+        "default-src 'self'",
+        "script-src 'self'",
+        "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com",
+        "font-src 'self' https://fonts.gstatic.com data:",
+        "img-src 'self' data: https://lh3.googleusercontent.com",
+        "connect-src 'self' ws: wss:",
+        "frame-ancestors 'none'",
+        "base-uri 'self'",
+        "form-action 'self' https://accounts.google.com",
+      ].join('; '),
+    );
+    next();
+  });
+
+  app.use(express.json({ limit: '1mb' }));
+
+  // Return clean JSON 400 on malformed JSON bodies instead of HTML stack traces
+  app.use((err: unknown, _req: express.Request, res: express.Response, next: express.NextFunction) => {
+    if (err && typeof err === 'object' && 'status' in err && (err as { status?: number }).status === 400) {
+      return res.status(400).json({ error: 'Malformed JSON request body' });
+    }
+    return next(err);
+  });
+
+  app.use('/api', buildApiRouter());
+
+  // Final error fallback (never expose stack traces in production)
+  app.use((err: unknown, _req: express.Request, res: express.Response, _next: express.NextFunction) => {
+    console.error('[SIGLENS] Unhandled server error:', err);
+    res.status(500).json({ error: 'Internal server error' });
+  });
+
+  return app;
 }
 
 async function bootstrap() {
   // Initialize SQLite database & migrations immediately
   getDb();
+  ensureAuthTables();
 
-  const app = express();
-  app.use(express.json({ limit: '1mb' }));
-  app.use('/api', buildApiRouter());
-
+  const app = createApp();
   const server = http.createServer(app);
   wsHub.attach(server);
 
@@ -1204,20 +1546,35 @@ async function bootstrap() {
     app.use(vite.middlewares);
   } else {
     const distDir = path.resolve(process.cwd(), 'dist');
-    app.use(express.static(distDir));
+    app.use(
+      '/assets',
+      express.static(path.join(distDir, 'assets'), {
+        maxAge: '365d',
+        immutable: true,
+      }),
+    );
+    app.use(
+      express.static(distDir, {
+        index: false,
+        maxAge: '1h',
+      }),
+    );
     app.get('*', (_req, res) => {
+      res.setHeader('Cache-Control', 'no-cache');
       res.sendFile(path.join(distDir, 'index.html'));
     });
   }
 
   server.listen(PORT, '0.0.0.0', () => {
-    console.log(`[CRYPTOLENS] Server listening on http://0.0.0.0:${PORT}`);
+    console.log(`[SIGLENS] Server listening on http://0.0.0.0:${PORT}`);
     startBackgroundScanner();
     startAutonomousPaperLoop();
   });
 }
 
-bootstrap().catch((err) => {
-  console.error('[CRYPTOLENS] Fatal startup error:', err);
-  process.exit(1);
-});
+if (process.env.SIGLENS_NO_AUTOSTART !== 'true') {
+  bootstrap().catch((err) => {
+    console.error('[SIGLENS] Fatal startup error:', err);
+    process.exit(1);
+  });
+}

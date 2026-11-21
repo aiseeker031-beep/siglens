@@ -2,6 +2,8 @@ import type {
   AIProviderProfile,
   AlertEventRecord,
   AlertRule,
+  ArbitrageScanPayload,
+  AuthStateResponse,
   Candle,
   DataFreshness,
   DefiOverview,
@@ -399,4 +401,13 @@ export const api = {
       method: 'POST',
       body: JSON.stringify({ startingBalanceUsd }),
     }),
+
+  // --- Real-Time Arbitrage Scanner ---
+  getArbitrage: (feeBps = 20) =>
+    apiJson<ArbitrageScanPayload>(`/api/arbitrage?feeBps=${encodeURIComponent(String(feeBps))}`),
+
+  // --- Google OAuth 2.0 Auth ---
+  getAuthState: () => apiJson<AuthStateResponse>('/api/auth/me'),
+
+  logoutAuth: () => apiJson<{ ok: boolean }>('/api/auth/logout', { method: 'POST' }),
 };

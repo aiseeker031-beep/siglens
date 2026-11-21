@@ -23,6 +23,7 @@ export type NavSection =
   | 'signals'
   | 'screener'
   | 'heatmaps'
+  | 'arbitrage'
   | 'arena'
   | 'ai'
   | 'settings';
@@ -817,4 +818,73 @@ export interface PaperArenaSnapshot {
   recentLogs: PaperBotLogRecord[];
   lastCycleAt: number | null;
   timestamp: number;
+}
+
+// =========================================================================
+// REAL-TIME ARBITRAGE SCANNER & AUTH
+// =========================================================================
+
+export interface ArbitrageVenueQuote {
+  exchange: ExchangeId;
+  displaySymbol: string;
+  price: number;
+  bid: number | null;
+  ask: number | null;
+  volume24hUsd: number;
+  timestamp: number;
+}
+
+export interface ArbitrageOpportunity {
+  id: string;
+  baseAsset: string;
+  buyExchange: ExchangeId;
+  buySymbol: string;
+  buyPrice: number;
+  sellExchange: ExchangeId;
+  sellSymbol: string;
+  sellPrice: number;
+  grossSpreadPct: number;
+  spreadUsd: number;
+  netSpreadPct: number;
+  minVolume24hUsd: number;
+  venueCount: number;
+  venues: ArbitrageVenueQuote[];
+  status: 'EXECUTABLE' | 'WATCH' | 'TIGHT';
+  timestamp: number;
+}
+
+export interface StatArbPair {
+  id: string;
+  label: string;
+  category: 'Crypto' | 'US Equities' | 'Global CFDs';
+  legA: { exchange: ExchangeId; marketType: MarketType; symbol: string; price: number };
+  legB: { exchange: ExchangeId; marketType: MarketType; symbol: string; price: number };
+  ratio: number;
+  meanRatio: number;
+  zScore: number;
+  correlation: number;
+  signal: 'LONG_A_SHORT_B' | 'SHORT_A_LONG_B' | 'NEUTRAL';
+  sampleBars: number;
+}
+
+export interface ArbitrageScanPayload {
+  opportunities: ArbitrageOpportunity[];
+  statArbPairs: StatArbPair[];
+  venuesScanned: ExchangeId[];
+  feeBpsRoundTrip: number;
+  updatedAt: number;
+}
+
+export interface AuthUser {
+  id: string;
+  email: string;
+  name: string;
+  picture: string | null;
+  provider: 'google';
+}
+
+export interface AuthStateResponse {
+  configured: boolean;
+  callbackUrl: string;
+  user: AuthUser | null;
 }

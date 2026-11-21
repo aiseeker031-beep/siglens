@@ -132,6 +132,11 @@ export const ScreenerView: React.FC = () => {
   }, []);
 
   useEffect(() => {
+    setScanExchange(globalExchange);
+    setScanMarketType(globalMarketType);
+  }, [globalExchange, globalMarketType]);
+
+  useEffect(() => {
     loadScreener(false);
   }, [scanExchange, scanMarketType, scanTimeframe]);
 

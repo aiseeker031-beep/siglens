@@ -18,6 +18,7 @@ import {
   upsertAlertRule,
 } from './db';
 import { fetchCandles, fetchDerivativesOverview, getMarketTickers } from './providers';
+import { assertSafeExternalUrl } from './ssrf';
 import { wsHub } from './wsHub';
 
 interface ScanCacheEntry {
@@ -269,14 +270,19 @@ export async function evaluateAlertsAgainstScan(rows: ScreenerRow[]): Promise<Al
       event: ev,
     });
 
-    // Optional user-configured webhook delivery (HTTPS only)
-    if (rule.webhookUrl && rule.webhookUrl.startsWith('https://')) {
-      fetch(rule.webhookUrl, {
-        method: 'POST',
-        signal: AbortSignal.timeout(5000),
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ source: 'SIGLENS', event: ev }),
-      }).catch(() => {});
+    // Optional user-configured webhook delivery (HTTPS + strict SSRF/DNS validation, no redirects)
+    if (rule.webhookUrl) {
+      assertSafeExternalUrl(rule.webhookUrl, { allowHttpLocalhost: false, resolveDns: true })
+        .then((safeUrl) =>
+          fetch(safeUrl.toString(), {
+            method: 'POST',
+            redirect: 'error',
+            signal: AbortSignal.timeout(5000),
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ source: 'SIGLENS', event: ev }),
+          }),
+        )
+        .catch(() => {});
     }
   }
 

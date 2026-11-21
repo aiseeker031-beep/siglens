@@ -1121,7 +1121,7 @@ export async function runAutonomousPaperCycle(runBots = true): Promise<{
           const best = eligible[0];
           const setup = best.signalSetup!;
           const side: PaperSide = setup.direction === 'BUY' ? 'LONG' : 'SHORT';
-          const atrAbs = best.atrPct && best.lastPrice > 0 ? (best.atrPct / 100) * best.lastPrice : null;
+          const atrAbs = best.atrPct && best.price > 0 ? (best.atrPct / 100) * best.price : null;
           const trailingAtr =
             bot.trailingStopAtrMult && atrAbs ? atrAbs * bot.trailingStopAtrMult : null;
 
