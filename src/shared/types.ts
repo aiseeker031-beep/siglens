@@ -20,15 +20,9 @@ export type DataFreshness = 'LIVE' | 'DELAYED' | 'RECONNECTING' | 'STALE' | 'UNA
 export type NavSection =
   | 'overview'
   | 'markets'
-  | 'explorer'
   | 'signals'
   | 'screener'
-  | 'studio3d'
   | 'heatmaps'
-  | 'derivatives'
-  | 'defi'
-  | 'compare'
-  | 'alerts'
   | 'ai'
   | 'settings';
 

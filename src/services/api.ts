@@ -29,9 +29,25 @@ async function apiJson<T>(url: string, init?: RequestInit): Promise<T> {
       ...(init?.headers ?? {}),
     },
   });
-  const data = await res.json().catch(() => ({}));
+  const contentType = res.headers.get('content-type') || '';
+  if (!contentType.includes('application/json')) {
+    const text = await res.text().catch(() => '');
+    throw new Error(
+      res.ok
+        ? 'Server returned a non-JSON response while warming up.'
+        : `Request failed (${res.status})${text ? `: ${text.slice(0, 120)}` : ''}`,
+    );
+  }
+  let data: unknown;
+  try {
+    data = await res.json();
+  } catch {
+    throw new Error(`Invalid JSON payload from server (${res.status})`);
+  }
   if (!res.ok) {
-    throw new Error((data as { error?: string }).error || `Request failed (${res.status})`);
+    throw new Error(
+      (data as { error?: string } | null)?.error || `Request failed (${res.status})`,
+    );
   }
   return data as T;
 }

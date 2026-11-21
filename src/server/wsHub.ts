@@ -38,7 +38,7 @@ export class MarketWebSocketHub {
         JSON.stringify({
           type: 'connection:ready',
           timestamp: Date.now(),
-          message: 'Connected to CRYPTOLENS real-time stream aggregator',
+          message: 'Connected to SIGLENS real-time stream aggregator',
         }),
       );
 

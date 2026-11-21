@@ -6,17 +6,12 @@ import type { MarketTicker, NavSection } from '../../shared/types';
 import { useAppStore } from '../../store/useAppStore';
 
 const QUICK_PAGES: { section: NavSection; label: string; hint: string }[] = [
-  { section: 'overview', label: 'Overview Dashboard', hint: 'Market pulse, movers & watchlist' },
-  { section: 'explorer', label: 'Asset Explorer', hint: '2D/3D charts & 10-indicator signal report' },
+  { section: 'overview', label: 'Home Dashboard', hint: 'Market pulse, live chart & watchlist' },
+  { section: 'markets', label: 'Markets', hint: 'Real-time multi-exchange spot & perp pairs' },
+  { section: 'signals', label: 'Live Signal Feed', hint: 'Real-time Entry, SL & TP1-TP3 setups' },
   { section: 'screener', label: 'Advanced Screener', hint: '20 executable presets & custom filters' },
-  { section: 'signals', label: 'Live Signal Feed', hint: 'Confirmed technical events & transitions' },
-  { section: 'studio3d', label: '3D Chart Studio', hint: 'Interactive WebGL candlesticks & surfaces' },
   { section: 'heatmaps', label: 'Market Heatmaps', hint: 'Performance, correlation & breadth' },
-  { section: 'derivatives', label: 'Derivatives Analytics', hint: 'Bybit V5 funding, OI & basis' },
-  { section: 'defi', label: 'DeFi Intelligence', hint: 'DefiLlama TVL, chains & protocols' },
-  { section: 'compare', label: 'Compare Assets', hint: 'Overlay up to 5 assets & correlation' },
-  { section: 'alerts', label: 'Smart Alerts', hint: 'Technical condition & webhook rules' },
-  { section: 'ai', label: 'AI Research Assistant', hint: 'Optional BYOK explainability & NL scan' },
+  { section: 'ai', label: 'AI Insights', hint: 'Optional BYOK explainability & NL scan' },
   { section: 'settings', label: 'Settings & Diagnostics', hint: 'Theme, weights, providers & BYOK' },
 ];
 
@@ -85,37 +80,37 @@ export const CommandSearchModal: React.FC = () => {
       onClick={() => setOpen(false)}
     >
       <div
-        className="w-full max-w-2xl rounded-xl border border-[#E6EBF0] dark:border-[#27313C] bg-[#FFFFFF] dark:bg-[#151B23] shadow-2xl overflow-hidden"
+        className="w-full max-w-2xl rounded-2xl sig-glass shadow-2xl overflow-hidden"
         onClick={(e) => e.stopPropagation()}
       >
-        <div className="flex items-center gap-3 px-4 py-3 border-b border-[#E6EBF0] dark:border-[#27313C]">
-          <Search className="w-4 h-4 text-[#677482] dark:text-[#8B97A5] shrink-0" />
+        <div className="flex items-center gap-3 px-4 py-3.5 border-b border-[#E8DDD1] dark:border-[#FFA95C]/14">
+          <Search className="w-4 h-4 text-[#756253] dark:text-[#B9A392] shrink-0" />
           <input
             autoFocus
             type="text"
             value={query}
             onChange={(e) => setQuery(e.target.value)}
             placeholder="Search pairs (BTC/USDT, ETH, SOL, Bybit, Kraken) or workspace..."
-            className="w-full bg-transparent text-sm text-[#17212B] dark:text-[#F4F7FA] placeholder-[#677482] dark:placeholder-[#8B97A5] focus:outline-none"
+            className="w-full bg-transparent text-sm text-[#1D150F] dark:text-[#FFF8F0] placeholder-[#756253] dark:placeholder-[#B9A392] focus:outline-none"
           />
           <button
             type="button"
             onClick={() => setOpen(false)}
             aria-label="Close search"
-            className="p-1 rounded-md text-[#677482] dark:text-[#8B97A5] hover:bg-[#F1F5F9] dark:hover:bg-[#1B232D]"
+            className="p-1 rounded-lg text-[#756253] dark:text-[#B9A392] hover:bg-[#EFE4D7] dark:hover:bg-[#2F1E13]"
           >
             <X className="w-4 h-4" />
           </button>
         </div>
 
-        <div className="max-h-[65vh] overflow-y-auto divide-y divide-[#E6EBF0] dark:divide-[#27313C]">
+        <div className="max-h-[65vh] overflow-y-auto divide-y divide-[#E8DDD1]/70 dark:divide-[#FFA95C]/12">
           {/* Markets section */}
           <div className="p-2">
-            <div className="px-2 py-1 text-[11px] font-medium text-[#677482] dark:text-[#8B97A5]">
+            <div className="px-2 py-1 text-[11px] font-medium text-[#756253] dark:text-[#B9A392]">
               Markets {loading ? '· Searching...' : `· ${results.length} matches`}
             </div>
             {results.length === 0 && !loading && (
-              <div className="px-3 py-4 text-xs text-[#677482] dark:text-[#8B97A5]">
+              <div className="px-3 py-4 text-xs text-[#756253] dark:text-[#B9A392]">
                 No matching markets found across connected public exchanges.
               </div>
             )}
@@ -125,25 +120,25 @@ export const CommandSearchModal: React.FC = () => {
                   key={m.canonicalId}
                   type="button"
                   onClick={() => selectMarket(m.exchange, m.marketType, m.displaySymbol, true)}
-                  className="w-full flex items-center justify-between px-3 py-2 rounded-lg text-left hover:bg-[#F1F5F9] dark:hover:bg-[#1B232D] transition-colors"
+                  className="w-full flex items-center justify-between px-3 py-2 rounded-xl text-left hover:bg-[#EFE4D7]/70 dark:hover:bg-[#2F1E13]/70 transition-colors"
                 >
                   <div className="flex items-center gap-2.5 min-w-0">
-                    <span className="text-sm font-semibold text-[#17212B] dark:text-[#F4F7FA] font-mono">
+                    <span className="text-sm font-semibold text-[#1D150F] dark:text-[#FFF8F0] font-mono">
                       {m.displaySymbol}
                     </span>
-                    <span className="text-xs text-[#677482] dark:text-[#8B97A5]">
+                    <span className="text-xs text-[#756253] dark:text-[#B9A392]">
                       {m.exchange} · {m.marketType}
                     </span>
                   </div>
                   <div className="flex items-center gap-3 font-mono text-xs tabular-nums shrink-0">
-                    <span className="text-[#17212B] dark:text-[#F4F7FA]">
+                    <span className="text-[#1D150F] dark:text-[#FFF8F0]">
                       ${formatPrice(m.lastPrice)}
                     </span>
                     <span
                       className={
                         m.change24hPct >= 0
-                          ? 'text-[#16A378] dark:text-[#35C89A]'
-                          : 'text-[#DC4C54] dark:text-[#F16B72]'
+                          ? 'text-[#12A875] dark:text-[#22E59B]'
+                          : 'text-[#DC4C54] dark:text-[#FF747B]'
                       }
                     >
                       {formatPercent(m.change24hPct)}
@@ -157,7 +152,7 @@ export const CommandSearchModal: React.FC = () => {
           {/* Navigation shortcuts */}
           {matchedPages.length > 0 && (
             <div className="p-2">
-              <div className="px-2 py-1 text-[11px] font-medium text-[#677482] dark:text-[#8B97A5]">
+              <div className="px-2 py-1 text-[11px] font-medium text-[#756253] dark:text-[#B9A392]">
                 Workspaces
               </div>
               <div className="space-y-0.5">
@@ -169,12 +164,12 @@ export const CommandSearchModal: React.FC = () => {
                       setActiveSection(p.section);
                       setOpen(false);
                     }}
-                    className="w-full flex items-center justify-between px-3 py-2 rounded-lg text-left hover:bg-[#F1F5F9] dark:hover:bg-[#1B232D] transition-colors"
+                    className="w-full flex items-center justify-between px-3 py-2 rounded-xl text-left hover:bg-[#EFE4D7]/70 dark:hover:bg-[#2F1E13]/70 transition-colors"
                   >
-                    <span className="text-sm font-medium text-[#17212B] dark:text-[#F4F7FA]">
+                    <span className="text-sm font-medium text-[#1D150F] dark:text-[#FFF8F0]">
                       {p.label}
                     </span>
-                    <span className="text-xs text-[#677482] dark:text-[#8B97A5]">{p.hint}</span>
+                    <span className="text-xs text-[#756253] dark:text-[#B9A392]">{p.hint}</span>
                   </button>
                 ))}
               </div>

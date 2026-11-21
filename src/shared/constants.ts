@@ -78,7 +78,7 @@ export const DEFAULT_WEIGHTS: IndicatorWeights = {
 };
 
 export const DEFAULT_PREFERENCES: UserPreferences = {
-  theme: 'dark',
+  theme: 'light',
   timezone: 'UTC',
   decimalPrecision: 'auto',
   defaultExchange: 'binance',

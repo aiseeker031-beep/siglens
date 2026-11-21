@@ -3,7 +3,6 @@ import {
   ArrowDownUp,
   Download,
   Filter,
-  GitCompareArrows,
   Plus,
   RefreshCw,
   Star,
@@ -56,7 +55,6 @@ export const ScreenerView: React.FC = () => {
   const watchlist = useAppStore((s) => s.watchlist);
   const toggleWatchlist = useAppStore((s) => s.toggleWatchlist);
   const selectMarket = useAppStore((s) => s.selectMarket);
-  const setActiveSection = useAppStore((s) => s.setActiveSection);
 
   const [scanExchange, setScanExchange] = useState<ExchangeId>(globalExchange);
   const [scanMarketType, setScanMarketType] = useState<MarketType>(globalMarketType);
@@ -240,7 +238,7 @@ export const ScreenerView: React.FC = () => {
 
   const handleExportCsv = () => {
     exportToCsv(
-      `cryptolens-screener-${scanExchange}-${scanTimeframe}.csv`,
+      `siglens-screener-${scanExchange}-${scanTimeframe}.csv`,
       [
         'Symbol',
         'Exchange',
@@ -294,7 +292,7 @@ export const ScreenerView: React.FC = () => {
       <div className="flex flex-wrap items-end justify-between gap-3">
         <div>
           <h1 className="text-xl sm:text-2xl font-bold tracking-tight">Advanced Crypto Screener</h1>
-          <p className="text-xs text-[#677482] dark:text-[#8B97A5] mt-0.5">
+          <p className="text-xs text-[#756253] dark:text-[#C5B1A0] mt-0.5">
             Deterministic multi-indicator filtering across {scanMeta?.totalScanned ?? 0} real markets on{' '}
             {EXCHANGE_LABELS[scanExchange]} ({scanMarketType}, {scanTimeframe}).
             {scanMeta?.scannedAt
@@ -312,7 +310,7 @@ export const ScreenerView: React.FC = () => {
               setScanExchange(ex);
               if (ex !== 'bybit' && scanMarketType === 'perpetual') setScanMarketType('spot');
             }}
-            className="px-2.5 py-1.5 rounded-lg border border-[#E6EBF0] dark:border-[#27313C] bg-[#FFFFFF] dark:bg-[#151B23]"
+            className="px-2.5 py-1.5 rounded-lg border border-[#E8DDD1] dark:border-[#FFA95C]/18 bg-[#FFFFFF] dark:bg-[#19100A]/80 dark:backdrop-blur-md"
           >
             <option value="binance">Binance</option>
             <option value="bybit">Bybit</option>
@@ -324,7 +322,7 @@ export const ScreenerView: React.FC = () => {
             aria-label="Screener market type"
             value={scanMarketType}
             onChange={(e) => setScanMarketType(e.target.value as MarketType)}
-            className="px-2.5 py-1.5 rounded-lg border border-[#E6EBF0] dark:border-[#27313C] bg-[#FFFFFF] dark:bg-[#151B23]"
+            className="px-2.5 py-1.5 rounded-lg border border-[#E8DDD1] dark:border-[#FFA95C]/18 bg-[#FFFFFF] dark:bg-[#19100A]/80 dark:backdrop-blur-md"
           >
             <option value="spot">Spot</option>
             {scanExchange === 'bybit' && <option value="perpetual">Perpetual</option>}
@@ -334,7 +332,7 @@ export const ScreenerView: React.FC = () => {
             aria-label="Screener timeframe"
             value={scanTimeframe}
             onChange={(e) => setScanTimeframe(e.target.value as Timeframe)}
-            className="px-2.5 py-1.5 rounded-lg border border-[#E6EBF0] dark:border-[#27313C] bg-[#FFFFFF] dark:bg-[#151B23]"
+            className="px-2.5 py-1.5 rounded-lg border border-[#E8DDD1] dark:border-[#FFA95C]/18 bg-[#FFFFFF] dark:bg-[#19100A]/80 dark:backdrop-blur-md"
           >
             {QUICK_TIMEFRAMES.map((tf) => (
               <option key={tf} value={tf}>
@@ -346,7 +344,7 @@ export const ScreenerView: React.FC = () => {
           <button
             type="button"
             onClick={() => setShowFiltersPanel((v) => !v)}
-            className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-[#E6EBF0] dark:border-[#27313C] bg-[#FFFFFF] dark:bg-[#151B23] font-medium"
+            className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-[#E8DDD1] dark:border-[#FFA95C]/18 bg-[#FFFFFF] dark:bg-[#19100A]/80 dark:backdrop-blur-md font-medium"
           >
             <Filter className="w-3.5 h-3.5" />
             {showFiltersPanel ? 'Hide Filters' : 'Show Filters'}
@@ -356,7 +354,7 @@ export const ScreenerView: React.FC = () => {
             type="button"
             onClick={handleExportCsv}
             disabled={filteredRows.length === 0}
-            className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-[#E6EBF0] dark:border-[#27313C] bg-[#FFFFFF] dark:bg-[#151B23] font-medium disabled:opacity-40"
+            className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-[#E8DDD1] dark:border-[#FFA95C]/18 bg-[#FFFFFF] dark:bg-[#19100A]/80 dark:backdrop-blur-md font-medium disabled:opacity-40"
           >
             <Download className="w-3.5 h-3.5" />
             CSV
@@ -365,7 +363,7 @@ export const ScreenerView: React.FC = () => {
           <button
             type="button"
             onClick={() => loadScreener(true)}
-            className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-[#17212B] text-white dark:bg-[#B6F36A] dark:text-[#0B0F14] font-semibold"
+            className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg sig-btn-primary font-semibold"
           >
             <RefreshCw className={`w-3.5 h-3.5 ${loading ? 'animate-spin' : ''}`} />
             Rescan
@@ -374,7 +372,7 @@ export const ScreenerView: React.FC = () => {
       </div>
 
       {/* Built-in & Custom Executable Presets */}
-      <div className="rounded-xl border border-[#E6EBF0] dark:border-[#27313C] bg-[#FFFFFF] dark:bg-[#151B23] p-3.5 space-y-3">
+      <div className="rounded-xl border border-[#E8DDD1] dark:border-[#FFA95C]/18 bg-[#FFFFFF] dark:bg-[#19100A]/80 dark:backdrop-blur-md p-3.5 space-y-3">
         <div className="flex flex-wrap items-center justify-between gap-2">
           <div className="flex flex-wrap items-center gap-1.5">
             <span className="text-xs font-semibold mr-1">Presets ({allPresets.length}):</span>
@@ -385,8 +383,8 @@ export const ScreenerView: React.FC = () => {
                 onClick={() => setPresetCategory(cat)}
                 className={`px-2 py-0.5 rounded text-[11px] font-medium transition-colors ${
                   presetCategory === cat
-                    ? 'bg-[#17212B] text-white dark:bg-[#B6F36A] dark:text-[#0B0F14]'
-                    : 'bg-[#F7F9FB] dark:bg-[#10151C] text-[#677482] dark:text-[#8B97A5] hover:text-[#17212B] dark:hover:text-[#F4F7FA]'
+                    ? 'sig-btn-primary'
+                    : 'bg-[#F6EFE6] dark:bg-[#130C07]/75 text-[#756253] dark:text-[#C5B1A0] hover:text-[#1D150F] dark:hover:text-[#F4F7FA]'
                 }`}
               >
                 {cat}
@@ -397,7 +395,7 @@ export const ScreenerView: React.FC = () => {
             <button
               type="button"
               onClick={() => setSaveModalOpen(true)}
-              className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg border border-[#E6EBF0] dark:border-[#27313C] text-[11px] font-medium hover:bg-[#F7F9FB] dark:hover:bg-[#1B232D]"
+              className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg border border-[#E8DDD1] dark:border-[#FFA95C]/18 text-[11px] font-medium hover:bg-[#F6EFE6] dark:hover:bg-[#2F1E13]/75"
             >
               <Plus className="w-3 h-3" />
               Save Custom Preset
@@ -425,7 +423,7 @@ export const ScreenerView: React.FC = () => {
                 className={`group relative rounded-lg border p-2.5 text-left transition-colors cursor-pointer ${
                   active
                     ? 'border-[#2563EB] dark:border-[#4EA1FF] bg-[#2563EB]/8 dark:bg-[#4EA1FF]/10'
-                    : 'border-[#E6EBF0] dark:border-[#27313C] bg-[#F7F9FB] dark:bg-[#10151C] hover:border-[#2563EB]/50 dark:hover:border-[#4EA1FF]/50'
+                    : 'border-[#E8DDD1] dark:border-[#FFA95C]/18 bg-[#F6EFE6] dark:bg-[#130C07]/75 hover:border-[#2563EB]/50 dark:hover:border-[#4EA1FF]/50'
                 }`}
                 onClick={() => applyPreset(preset)}
               >
@@ -435,7 +433,7 @@ export const ScreenerView: React.FC = () => {
                     {matchCount}
                   </span>
                 </div>
-                <p className="text-[10px] text-[#677482] dark:text-[#8B97A5] line-clamp-2 mt-1">
+                <p className="text-[10px] text-[#756253] dark:text-[#C5B1A0] line-clamp-2 mt-1">
                   {preset.description}
                 </p>
                 {!preset.isBuiltIn && (
@@ -446,7 +444,7 @@ export const ScreenerView: React.FC = () => {
                       e.stopPropagation();
                       handleDeleteCustomPreset(preset.id);
                     }}
-                    className="absolute top-1.5 right-6 p-0.5 text-[#677482] hover:text-[#DC4C54] opacity-0 group-hover:opacity-100"
+                    className="absolute top-1.5 right-6 p-0.5 text-[#756253] hover:text-[#DC4C54] opacity-0 group-hover:opacity-100"
                   >
                     <Trash2 className="w-3 h-3" />
                   </button>
@@ -459,11 +457,11 @@ export const ScreenerView: React.FC = () => {
 
       {/* Multi-category Rule Builder */}
       {showFiltersPanel && (
-        <div className="rounded-xl border border-[#E6EBF0] dark:border-[#27313C] bg-[#FFFFFF] dark:bg-[#151B23] p-4 space-y-4">
+        <div className="rounded-xl border border-[#E8DDD1] dark:border-[#FFA95C]/18 bg-[#FFFFFF] dark:bg-[#19100A]/80 dark:backdrop-blur-md p-4 space-y-4">
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-3 text-xs">
             {/* Market */}
             <div className="space-y-2">
-              <div className="text-[11px] font-semibold uppercase tracking-wider text-[#677482] dark:text-[#8B97A5]">
+              <div className="text-[11px] font-semibold uppercase tracking-wider text-[#756253] dark:text-[#C5B1A0]">
                 Market & Liquidity
               </div>
               <input
@@ -471,7 +469,7 @@ export const ScreenerView: React.FC = () => {
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
                 placeholder="Search symbol (e.g. BTC)"
-                className="w-full px-2.5 py-1.5 rounded-lg border border-[#E6EBF0] dark:border-[#27313C] bg-[#F7F9FB] dark:bg-[#10151C]"
+                className="w-full px-2.5 py-1.5 rounded-lg border border-[#E8DDD1] dark:border-[#FFA95C]/18 bg-[#F6EFE6] dark:bg-[#130C07]/75"
               />
               <div className="grid grid-cols-2 gap-2">
                 <input
@@ -480,7 +478,7 @@ export const ScreenerView: React.FC = () => {
                   value={filters.minChange24h ?? ''}
                   onChange={(e) => updateNumFilter('minChange24h', e.target.value)}
                   placeholder="Min 24h %"
-                  className="px-2 py-1.5 rounded-lg border border-[#E6EBF0] dark:border-[#27313C] bg-[#F7F9FB] dark:bg-[#10151C] font-mono"
+                  className="px-2 py-1.5 rounded-lg border border-[#E8DDD1] dark:border-[#FFA95C]/18 bg-[#F6EFE6] dark:bg-[#130C07]/75 font-mono"
                 />
                 <input
                   type="number"
@@ -488,7 +486,7 @@ export const ScreenerView: React.FC = () => {
                   value={filters.maxChange24h ?? ''}
                   onChange={(e) => updateNumFilter('maxChange24h', e.target.value)}
                   placeholder="Max 24h %"
-                  className="px-2 py-1.5 rounded-lg border border-[#E6EBF0] dark:border-[#27313C] bg-[#F7F9FB] dark:bg-[#10151C] font-mono"
+                  className="px-2 py-1.5 rounded-lg border border-[#E8DDD1] dark:border-[#FFA95C]/18 bg-[#F6EFE6] dark:bg-[#130C07]/75 font-mono"
                 />
               </div>
               <input
@@ -497,13 +495,13 @@ export const ScreenerView: React.FC = () => {
                 value={filters.minVolume24h ?? ''}
                 onChange={(e) => updateNumFilter('minVolume24h', e.target.value)}
                 placeholder="Min 24h Volume (USD)"
-                className="w-full px-2 py-1.5 rounded-lg border border-[#E6EBF0] dark:border-[#27313C] bg-[#F7F9FB] dark:bg-[#10151C] font-mono"
+                className="w-full px-2 py-1.5 rounded-lg border border-[#E8DDD1] dark:border-[#FFA95C]/18 bg-[#F6EFE6] dark:bg-[#130C07]/75 font-mono"
               />
             </div>
 
             {/* Trend */}
             <div className="space-y-2">
-              <div className="text-[11px] font-semibold uppercase tracking-wider text-[#677482] dark:text-[#8B97A5]">
+              <div className="text-[11px] font-semibold uppercase tracking-wider text-[#756253] dark:text-[#C5B1A0]">
                 Trend Structure
               </div>
               <div className="grid grid-cols-3 gap-1.5">
@@ -515,13 +513,13 @@ export const ScreenerView: React.FC = () => {
                   ] as const
                 ).map(([field, label]) => (
                   <label key={field} className="space-y-1">
-                    <span className="block text-[10px] text-[#677482] dark:text-[#8B97A5]">{label}</span>
+                    <span className="block text-[10px] text-[#756253] dark:text-[#C5B1A0]">{label}</span>
                     <select
                       value={
                         filters[field] === undefined ? 'ANY' : filters[field] ? 'TRUE' : 'FALSE'
                       }
                       onChange={(e) => updateBoolFilter(field, e.target.value)}
-                      className="w-full px-1.5 py-1.5 rounded-lg border border-[#E6EBF0] dark:border-[#27313C] bg-[#F7F9FB] dark:bg-[#10151C]"
+                      className="w-full px-1.5 py-1.5 rounded-lg border border-[#E8DDD1] dark:border-[#FFA95C]/18 bg-[#F6EFE6] dark:bg-[#130C07]/75"
                     >
                       <option value="ANY">Any</option>
                       <option value="TRUE">Above</option>
@@ -537,7 +535,7 @@ export const ScreenerView: React.FC = () => {
                   value={filters.minAdx ?? ''}
                   onChange={(e) => updateNumFilter('minAdx', e.target.value)}
                   placeholder="Min ADX 14"
-                  className="px-2 py-1.5 rounded-lg border border-[#E6EBF0] dark:border-[#27313C] bg-[#F7F9FB] dark:bg-[#10151C] font-mono"
+                  className="px-2 py-1.5 rounded-lg border border-[#E8DDD1] dark:border-[#FFA95C]/18 bg-[#F6EFE6] dark:bg-[#130C07]/75 font-mono"
                 />
                 <select
                   aria-label="EMA cross filter"
@@ -549,7 +547,7 @@ export const ScreenerView: React.FC = () => {
                       emaCross: e.target.value === 'ANY' ? undefined : e.target.value,
                     }));
                   }}
-                  className="px-2 py-1.5 rounded-lg border border-[#E6EBF0] dark:border-[#27313C] bg-[#F7F9FB] dark:bg-[#10151C]"
+                  className="px-2 py-1.5 rounded-lg border border-[#E8DDD1] dark:border-[#FFA95C]/18 bg-[#F6EFE6] dark:bg-[#130C07]/75"
                 >
                   <option value="ANY">EMA Cross: Any</option>
                   <option value="GOLDEN">Golden / Bullish</option>
@@ -560,7 +558,7 @@ export const ScreenerView: React.FC = () => {
 
             {/* Momentum */}
             <div className="space-y-2">
-              <div className="text-[11px] font-semibold uppercase tracking-wider text-[#677482] dark:text-[#8B97A5]">
+              <div className="text-[11px] font-semibold uppercase tracking-wider text-[#756253] dark:text-[#C5B1A0]">
                 Momentum & Divergence
               </div>
               <div className="grid grid-cols-2 gap-2">
@@ -570,7 +568,7 @@ export const ScreenerView: React.FC = () => {
                   value={filters.minRsi ?? ''}
                   onChange={(e) => updateNumFilter('minRsi', e.target.value)}
                   placeholder="Min RSI 14"
-                  className="px-2 py-1.5 rounded-lg border border-[#E6EBF0] dark:border-[#27313C] bg-[#F7F9FB] dark:bg-[#10151C] font-mono"
+                  className="px-2 py-1.5 rounded-lg border border-[#E8DDD1] dark:border-[#FFA95C]/18 bg-[#F6EFE6] dark:bg-[#130C07]/75 font-mono"
                 />
                 <input
                   type="number"
@@ -578,7 +576,7 @@ export const ScreenerView: React.FC = () => {
                   value={filters.maxRsi ?? ''}
                   onChange={(e) => updateNumFilter('maxRsi', e.target.value)}
                   placeholder="Max RSI 14"
-                  className="px-2 py-1.5 rounded-lg border border-[#E6EBF0] dark:border-[#27313C] bg-[#F7F9FB] dark:bg-[#10151C] font-mono"
+                  className="px-2 py-1.5 rounded-lg border border-[#E8DDD1] dark:border-[#FFA95C]/18 bg-[#F6EFE6] dark:bg-[#130C07]/75 font-mono"
                 />
               </div>
               <div className="grid grid-cols-2 gap-2">
@@ -595,7 +593,7 @@ export const ScreenerView: React.FC = () => {
                           : (e.target.value as 'POSITIVE' | 'NEGATIVE'),
                     }));
                   }}
-                  className="px-2 py-1.5 rounded-lg border border-[#E6EBF0] dark:border-[#27313C] bg-[#F7F9FB] dark:bg-[#10151C]"
+                  className="px-2 py-1.5 rounded-lg border border-[#E8DDD1] dark:border-[#FFA95C]/18 bg-[#F6EFE6] dark:bg-[#130C07]/75"
                 >
                   <option value="ANY">MACD Hist: Any</option>
                   <option value="POSITIVE">Positive (&gt; 0)</option>
@@ -614,7 +612,7 @@ export const ScreenerView: React.FC = () => {
                           : (e.target.value as 'BULLISH' | 'BEARISH'),
                     }));
                   }}
-                  className="px-2 py-1.5 rounded-lg border border-[#E6EBF0] dark:border-[#27313C] bg-[#F7F9FB] dark:bg-[#10151C]"
+                  className="px-2 py-1.5 rounded-lg border border-[#E8DDD1] dark:border-[#FFA95C]/18 bg-[#F6EFE6] dark:bg-[#130C07]/75"
                 >
                   <option value="ANY">RSI Div: Any</option>
                   <option value="BULLISH">Bullish Div</option>
@@ -625,7 +623,7 @@ export const ScreenerView: React.FC = () => {
 
             {/* Volume & Volatility */}
             <div className="space-y-2">
-              <div className="text-[11px] font-semibold uppercase tracking-wider text-[#677482] dark:text-[#8B97A5]">
+              <div className="text-[11px] font-semibold uppercase tracking-wider text-[#756253] dark:text-[#C5B1A0]">
                 Volume, Volatility & Structure
               </div>
               <div className="grid grid-cols-2 gap-2">
@@ -635,7 +633,7 @@ export const ScreenerView: React.FC = () => {
                   value={filters.minRvol ?? ''}
                   onChange={(e) => updateNumFilter('minRvol', e.target.value)}
                   placeholder="Min RVOL"
-                  className="px-2 py-1.5 rounded-lg border border-[#E6EBF0] dark:border-[#27313C] bg-[#F7F9FB] dark:bg-[#10151C] font-mono"
+                  className="px-2 py-1.5 rounded-lg border border-[#E8DDD1] dark:border-[#FFA95C]/18 bg-[#F6EFE6] dark:bg-[#130C07]/75 font-mono"
                 />
                 <input
                   type="number"
@@ -643,7 +641,7 @@ export const ScreenerView: React.FC = () => {
                   value={filters.minAtrPct ?? ''}
                   onChange={(e) => updateNumFilter('minAtrPct', e.target.value)}
                   placeholder="Min ATR %"
-                  className="px-2 py-1.5 rounded-lg border border-[#E6EBF0] dark:border-[#27313C] bg-[#F7F9FB] dark:bg-[#10151C] font-mono"
+                  className="px-2 py-1.5 rounded-lg border border-[#E8DDD1] dark:border-[#FFA95C]/18 bg-[#F6EFE6] dark:bg-[#130C07]/75 font-mono"
                 />
               </div>
               <div className="flex flex-wrap gap-2 pt-0.5">
@@ -676,9 +674,9 @@ export const ScreenerView: React.FC = () => {
           </div>
 
           {/* Signal Class Toggles */}
-          <div className="flex flex-wrap items-center justify-between gap-2 pt-2 border-t border-[#E6EBF0] dark:border-[#27313C] text-xs">
+          <div className="flex flex-wrap items-center justify-between gap-2 pt-2 border-t border-[#E8DDD1] dark:border-[#FFA95C]/18 text-xs">
             <div className="flex flex-wrap items-center gap-1.5">
-              <span className="text-[11px] font-semibold text-[#677482] dark:text-[#8B97A5] mr-1">
+              <span className="text-[11px] font-semibold text-[#756253] dark:text-[#C5B1A0] mr-1">
                 Signal Classification:
               </span>
               {(
@@ -699,7 +697,7 @@ export const ScreenerView: React.FC = () => {
                     className={`px-2 py-1 rounded text-[11px] font-medium transition-opacity ${
                       selected
                         ? signalBgClass(cls)
-                        : 'border border-[#E6EBF0] dark:border-[#27313C] text-[#677482] dark:text-[#8B97A5] opacity-75 hover:opacity-100'
+                        : 'border border-[#E8DDD1] dark:border-[#FFA95C]/18 text-[#756253] dark:text-[#C5B1A0] opacity-75 hover:opacity-100'
                     }`}
                   >
                     {signalLabel(cls)}
@@ -708,7 +706,7 @@ export const ScreenerView: React.FC = () => {
               })}
             </div>
             <div className="flex items-center gap-2">
-              <span className="text-[11px] text-[#677482] dark:text-[#8B97A5]">Min Agreement %:</span>
+              <span className="text-[11px] text-[#756253] dark:text-[#C5B1A0]">Min Agreement %:</span>
               <input
                 type="number"
                 min={0}
@@ -716,7 +714,7 @@ export const ScreenerView: React.FC = () => {
                 value={filters.minAgreementPct ?? ''}
                 onChange={(e) => updateNumFilter('minAgreementPct', e.target.value)}
                 placeholder="0"
-                className="w-16 px-2 py-1 rounded-lg border border-[#E6EBF0] dark:border-[#27313C] bg-[#F7F9FB] dark:bg-[#10151C] font-mono text-xs"
+                className="w-16 px-2 py-1 rounded-lg border border-[#E8DDD1] dark:border-[#FFA95C]/18 bg-[#F6EFE6] dark:bg-[#130C07]/75 font-mono text-xs"
               />
             </div>
           </div>
@@ -724,11 +722,11 @@ export const ScreenerView: React.FC = () => {
       )}
 
       {/* Results Table */}
-      <div className="rounded-xl border border-[#E6EBF0] dark:border-[#27313C] bg-[#FFFFFF] dark:bg-[#151B23] overflow-hidden">
-        <div className="px-4 py-2.5 border-b border-[#E6EBF0] dark:border-[#27313C] flex flex-wrap items-center justify-between gap-2 text-xs">
+      <div className="rounded-xl border border-[#E8DDD1] dark:border-[#FFA95C]/18 bg-[#FFFFFF] dark:bg-[#19100A]/80 dark:backdrop-blur-md overflow-hidden">
+        <div className="px-4 py-2.5 border-b border-[#E8DDD1] dark:border-[#FFA95C]/18 flex flex-wrap items-center justify-between gap-2 text-xs">
           <div className="font-semibold">
             Matching Markets: <span className="font-mono tabular-nums">{filteredRows.length}</span>{' '}
-            <span className="font-normal text-[#677482] dark:text-[#8B97A5]">
+            <span className="font-normal text-[#756253] dark:text-[#C5B1A0]">
               / {rows.length} scanned ({scanMeta?.inProgress ? 'scan updating...' : 'confirmed close snapshots'})
             </span>
           </div>
@@ -746,7 +744,7 @@ export const ScreenerView: React.FC = () => {
           <div className="overflow-x-auto">
             <table className="w-full text-xs">
               <thead>
-                <tr className="border-b border-[#E6EBF0] dark:border-[#27313C] text-[11px] text-[#677482] dark:text-[#8B97A5] bg-[#F7F9FB] dark:bg-[#10151C]">
+                <tr className="border-b border-[#E8DDD1] dark:border-[#FFA95C]/18 text-[11px] text-[#756253] dark:text-[#C5B1A0] bg-[#F6EFE6] dark:bg-[#130C07]/75">
                   <th className="text-left px-3 py-2 font-medium w-8" />
                   <th className="text-left px-3 py-2 font-medium">Pair</th>
                   <th className="text-right px-3 py-2 font-medium">
@@ -796,13 +794,12 @@ export const ScreenerView: React.FC = () => {
                     </button>
                   </th>
                   <th className="text-left px-3 py-2 font-medium">Regime & Flags</th>
-                  <th className="text-right px-3 py-2 font-medium">Actions</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-[#E6EBF0] dark:divide-[#27313C]">
+              <tbody className="divide-y divide-[#E8DDD1] dark:divide-[#FFA95C]/14">
                 {filteredRows.length === 0 ? (
                   <tr>
-                    <td colSpan={14} className="px-4 py-8 text-center text-[#677482] dark:text-[#8B97A5]">
+                    <td colSpan={13} className="px-4 py-8 text-center text-[#756253] dark:text-[#C5B1A0]">
                       No assets match the current filter combination. Clear one or more rules or try another timeframe.
                     </td>
                   </tr>
@@ -820,14 +817,14 @@ export const ScreenerView: React.FC = () => {
                       <tr
                         key={row.canonicalId}
                         onClick={() => selectMarket(row.exchange, row.marketType, row.displaySymbol, true)}
-                        className="hover:bg-[#F7F9FB] dark:hover:bg-[#1B232D] cursor-pointer transition-colors"
+                        className="hover:bg-[#F6EFE6] dark:hover:bg-[#2F1E13]/75 cursor-pointer transition-colors"
                       >
                         <td className={`px-3 ${rowPad}`} onClick={(e) => e.stopPropagation()}>
                           <button
                             type="button"
                             aria-label={`Toggle ${row.displaySymbol} watchlist`}
                             onClick={() => toggleWatchlist(row.canonicalId)}
-                            className="p-1 text-[#677482] hover:text-[#E6A832]"
+                            className="p-1 text-[#756253] hover:text-[#E6A832]"
                           >
                             <Star
                               className={`w-3.5 h-3.5 ${
@@ -838,7 +835,7 @@ export const ScreenerView: React.FC = () => {
                         </td>
                         <td className={`px-3 ${rowPad} font-semibold whitespace-nowrap`}>
                           <div>{row.displaySymbol}</div>
-                          <div className="text-[10px] font-normal text-[#677482] dark:text-[#8B97A5]">
+                          <div className="text-[10px] font-normal text-[#756253] dark:text-[#C5B1A0]">
                             {EXCHANGE_LABELS[row.exchange]} · {row.marketType}
                           </div>
                         </td>
@@ -854,7 +851,7 @@ export const ScreenerView: React.FC = () => {
                         >
                           {formatPercent(row.change24hPct)}
                         </td>
-                        <td className={`px-3 ${rowPad} text-right font-mono tabular-nums text-[#677482] dark:text-[#8B97A5]`}>
+                        <td className={`px-3 ${rowPad} text-right font-mono tabular-nums text-[#756253] dark:text-[#C5B1A0]`}>
                           {formatCompactUsd(row.volume24hUsd)}
                         </td>
                         <td className={`px-3 ${rowPad} whitespace-nowrap`}>
@@ -888,19 +885,6 @@ export const ScreenerView: React.FC = () => {
                             </div>
                           )}
                         </td>
-                        <td className={`px-3 ${rowPad} text-right whitespace-nowrap`} onClick={(e) => e.stopPropagation()}>
-                          <button
-                            type="button"
-                            onClick={() => {
-                              selectMarket(row.exchange, row.marketType, row.displaySymbol, false);
-                              setActiveSection('compare');
-                            }}
-                            title="Open in Compare workspace"
-                            className="p-1.5 rounded hover:bg-[#E6EBF0] dark:hover:bg-[#27313C] text-[#677482] dark:text-[#8B97A5]"
-                          >
-                            <GitCompareArrows className="w-3.5 h-3.5" />
-                          </button>
-                        </td>
                       </tr>
                     );
                   })
@@ -916,12 +900,12 @@ export const ScreenerView: React.FC = () => {
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
           <form
             onSubmit={handleSaveCustomPreset}
-            className="w-full max-w-md rounded-xl border border-[#E6EBF0] dark:border-[#27313C] bg-[#FFFFFF] dark:bg-[#151B23] p-5 space-y-4 shadow-xl"
+            className="w-full max-w-md rounded-xl border border-[#E8DDD1] dark:border-[#FFA95C]/18 bg-[#FFFFFF] dark:bg-[#19100A]/80 dark:backdrop-blur-md p-5 space-y-4 shadow-xl"
           >
             <div className="flex items-center justify-between">
               <h2 className="text-sm font-bold">Save Custom Screener Preset</h2>
               <button type="button" onClick={() => setSaveModalOpen(false)}>
-                <X className="w-4 h-4 text-[#677482]" />
+                <X className="w-4 h-4 text-[#756253]" />
               </button>
             </div>
             <div className="space-y-3 text-xs">
@@ -933,7 +917,7 @@ export const ScreenerView: React.FC = () => {
                   value={newPresetName}
                   onChange={(e) => setNewPresetName(e.target.value)}
                   placeholder="e.g. Breakout Momentum RVOL 2x"
-                  className="w-full px-3 py-2 rounded-lg border border-[#E6EBF0] dark:border-[#27313C] bg-[#F7F9FB] dark:bg-[#10151C]"
+                  className="w-full px-3 py-2 rounded-lg border border-[#E8DDD1] dark:border-[#FFA95C]/18 bg-[#F6EFE6] dark:bg-[#130C07]/75"
                 />
               </div>
               <div>
@@ -943,7 +927,7 @@ export const ScreenerView: React.FC = () => {
                   value={newPresetDesc}
                   onChange={(e) => setNewPresetDesc(e.target.value)}
                   placeholder="Brief note on what this filter identifies"
-                  className="w-full px-3 py-2 rounded-lg border border-[#E6EBF0] dark:border-[#27313C] bg-[#F7F9FB] dark:bg-[#10151C]"
+                  className="w-full px-3 py-2 rounded-lg border border-[#E8DDD1] dark:border-[#FFA95C]/18 bg-[#F6EFE6] dark:bg-[#130C07]/75"
                 />
               </div>
             </div>
@@ -951,14 +935,14 @@ export const ScreenerView: React.FC = () => {
               <button
                 type="button"
                 onClick={() => setSaveModalOpen(false)}
-                className="px-3 py-1.5 rounded-lg border border-[#E6EBF0] dark:border-[#27313C]"
+                className="px-3 py-1.5 rounded-lg border border-[#E8DDD1] dark:border-[#FFA95C]/18"
               >
                 Cancel
               </button>
               <button
                 type="submit"
                 disabled={savingPreset}
-                className="px-3.5 py-1.5 rounded-lg bg-[#17212B] text-white dark:bg-[#B6F36A] dark:text-[#0B0F14] font-semibold"
+                className="px-3.5 py-1.5 rounded-lg sig-btn-primary font-semibold"
               >
                 {savingPreset ? 'Saving...' : 'Save Preset'}
               </button>

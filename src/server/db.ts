@@ -17,17 +17,55 @@ const DB_PATH = path.join(DATA_DIR, 'cryptolens.db');
 
 let dbInstance: DatabaseSync | null = null;
 
+function removeDbFiles(): void {
+  for (const suffix of ['', '-wal', '-shm']) {
+    const target = `${DB_PATH}${suffix}`;
+    try {
+      if (fs.existsSync(target)) {
+        fs.unlinkSync(target);
+      }
+    } catch {
+      // ignore unlink races
+    }
+  }
+}
+
+function openAndMigrate(): DatabaseSync {
+  const db = new DatabaseSync(DB_PATH);
+  try {
+    const check = db.prepare('PRAGMA quick_check;').get() as { quick_check?: string } | undefined;
+    if (check?.quick_check !== 'ok') {
+      throw new Error(`SQLite quick_check failed: ${check?.quick_check ?? 'unknown'}`);
+    }
+    db.exec('PRAGMA journal_mode = DELETE;');
+    db.exec('PRAGMA synchronous = NORMAL;');
+    db.exec('PRAGMA foreign_keys = ON;');
+    runMigrations(db);
+    return db;
+  } catch (err) {
+    try {
+      db.close();
+    } catch {
+      // ignore close errors on corrupted handle
+    }
+    throw err;
+  }
+}
+
 export function getDb(): DatabaseSync {
   if (dbInstance) return dbInstance;
   if (!fs.existsSync(DATA_DIR)) {
     fs.mkdirSync(DATA_DIR, { recursive: true });
   }
-  const db = new DatabaseSync(DB_PATH);
-  db.exec('PRAGMA journal_mode = WAL;');
-  db.exec('PRAGMA foreign_keys = ON;');
-  runMigrations(db);
-  dbInstance = db;
-  return db;
+  try {
+    dbInstance = openAndMigrate();
+    return dbInstance;
+  } catch (err) {
+    console.warn('[SIGLENS DB] Corrupted SQLite file detected; recreating clean cache DB:', err);
+    removeDbFiles();
+    dbInstance = openAndMigrate();
+    return dbInstance;
+  }
 }
 
 function runMigrations(db: DatabaseSync): void {
@@ -176,6 +214,32 @@ function runMigrations(db: DatabaseSync): void {
   db.prepare('INSERT OR IGNORE INTO schema_migrations (version, applied_at) VALUES (2, ?)').run(
     Date.now(),
   );
+
+  // One-time migration v3: switch default canvas to signature light theme (dark sidebar + alabaster canvas)
+  const hasV3 = db
+    .prepare('SELECT version FROM schema_migrations WHERE version = 3')
+    .get() as { version: number } | undefined;
+  if (!hasV3) {
+    const prefRow = db
+      .prepare('SELECT value_json FROM user_preferences WHERE key = ?')
+      .get('main') as { value_json: string } | undefined;
+    if (prefRow) {
+      try {
+        const parsed = JSON.parse(prefRow.value_json) as Partial<UserPreferences>;
+        parsed.theme = 'light';
+        db.prepare('UPDATE user_preferences SET value_json = ?, updated_at = ? WHERE key = ?').run(
+          JSON.stringify(parsed),
+          Date.now(),
+          'main',
+        );
+      } catch {
+        // ignore malformed row
+      }
+    }
+    db.prepare('INSERT OR IGNORE INTO schema_migrations (version, applied_at) VALUES (3, ?)').run(
+      Date.now(),
+    );
+  }
 }
 
 // --- Preferences ---

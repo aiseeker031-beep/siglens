@@ -159,7 +159,7 @@ async function fetchJsonWithMetrics<T>(
   try {
     const res = await fetch(url, {
       signal: AbortSignal.timeout(timeoutMs),
-      headers: { Accept: 'application/json', 'User-Agent': 'CRYPTOLENS-Analytics/1.0' },
+      headers: { Accept: 'application/json', 'User-Agent': 'SIGLENS-Analytics/1.0' },
     });
     if (!res.ok) {
       throw new Error(`HTTP ${res.status} from ${providerId}`);

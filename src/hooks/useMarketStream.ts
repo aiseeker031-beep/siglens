@@ -10,7 +10,7 @@ export function useMarketStream(): void {
   const exchange = useAppStore((s) => s.exchange);
   const symbol = useAppStore((s) => s.symbol);
   const timeframe = useAppStore((s) => s.timeframe);
-  const applyLiveTicker = useAppStore((s) => s.applyLiveTicker);
+  const applyLiveTickerBatch = useAppStore((s) => s.applyLiveTickerBatch);
   const applyLiveCandle = useAppStore((s) => s.applyLiveCandle);
   const setWsFreshness = useAppStore((s) => s.setWsFreshness);
   const pushNotification = useAppStore((s) => s.pushNotification);
@@ -23,6 +23,25 @@ export function useMarketStream(): void {
     let closedByCleanup = false;
     let reconnectTimer: number | null = null;
     let attempt = 0;
+    const tickerBuffer = new Map<
+      string,
+      {
+        canonicalId: string;
+        lastPrice: number;
+        change24hPct?: number;
+        high24h?: number;
+        low24h?: number;
+        quoteVolume24h?: number;
+        timestamp: number;
+      }
+    >();
+
+    const flushTimer = window.setInterval(() => {
+      if (tickerBuffer.size === 0) return;
+      const batch = Array.from(tickerBuffer.values());
+      tickerBuffer.clear();
+      applyLiveTickerBatch(batch);
+    }, 600);
 
     const connect = () => {
       if (closedByCleanup) return;
@@ -50,7 +69,7 @@ export function useMarketStream(): void {
         try {
           const msg = JSON.parse(String(evt.data)) as Record<string, unknown>;
           if (msg.type === 'ticker:update' && typeof msg.canonicalId === 'string') {
-            applyLiveTicker({
+            tickerBuffer.set(msg.canonicalId, {
               canonicalId: msg.canonicalId,
               lastPrice: Number(msg.lastPrice),
               change24hPct:
@@ -73,7 +92,7 @@ export function useMarketStream(): void {
             const ev = msg.event as AlertEventRecord;
             pushNotification(ev);
             if (typeof Notification !== 'undefined' && Notification.permission === 'granted') {
-              new Notification(`CRYPTOLENS Alert · ${ev.displaySymbol}`, { body: ev.message });
+              new Notification(`SIGLENS Alert · ${ev.displaySymbol}`, { body: ev.message });
             }
           }
         } catch {
@@ -111,10 +130,11 @@ export function useMarketStream(): void {
     return () => {
       closedByCleanup = true;
       if (reconnectTimer) window.clearTimeout(reconnectTimer);
+      window.clearInterval(flushTimer);
       window.clearInterval(staleTimer);
       wsRef.current?.close();
     };
-  }, [applyLiveCandle, applyLiveTicker, pushNotification, setWsFreshness]);
+  }, [applyLiveCandle, applyLiveTickerBatch, pushNotification, setWsFreshness]);
 
   // Update active kline subscription whenever pair or timeframe changes
   useEffect(() => {

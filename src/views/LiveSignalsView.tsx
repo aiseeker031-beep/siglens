@@ -124,21 +124,20 @@ export const LiveSignalsView: React.FC = () => {
     <div className="space-y-4">
       <div className="flex flex-wrap items-end justify-between gap-3">
         <div>
-          <h1 className="text-xl sm:text-2xl font-bold tracking-tight">Live Real-Time Signals</h1>
-          <p className="text-xs text-[#677482] dark:text-[#8B97A5] mt-0.5">
+          <p className="text-xs text-[#637369] dark:text-[#8FA398]">
             Real-time structured trade setups per pair — Symbol, Direction (BUY/SELL), Entry (NOW / Zone), Stop Loss (SL), and Take Profit (TP1, TP2, TP3) derived deterministically from live ATR(14) &amp; structural S/R zones.
           </p>
         </div>
 
         <div className="flex flex-wrap items-center gap-2 text-xs">
-          <span className="font-mono text-[11px] text-[#677482] dark:text-[#8B97A5]">
-            Stream: <strong className="text-[#16A378] dark:text-[#35C89A]">{wsFreshness}</strong>
+          <span className="font-mono text-[11px] text-[#637369] dark:text-[#8FA398]">
+            Stream: <strong className="text-[#15803D] dark:text-[#4ADE80]">{wsFreshness}</strong>
             {scannedAt ? ` · ${formatTimestamp(scannedAt, timezone, false)}` : ''}
           </span>
           <button
             type="button"
             onClick={() => loadData(true)}
-            className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-[#17212B] text-white dark:bg-[#B6F36A] dark:text-[#0B0F14] font-semibold"
+            className="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-xl sig-btn-primary font-semibold"
           >
             <RefreshCw className={`w-3.5 h-3.5 ${loading ? 'animate-spin' : ''}`} />
             Refresh Signals
@@ -147,15 +146,15 @@ export const LiveSignalsView: React.FC = () => {
       </div>
 
       {/* Mode Switch + Summary Counts */}
-      <div className="flex flex-wrap items-center justify-between gap-3 border-b border-[#E6EBF0] dark:border-[#27313C] pb-2.5 text-xs">
+      <div className="flex flex-wrap items-center justify-between gap-3 border-b border-[#E5EAE7] dark:border-[#213028] pb-2.5 text-xs">
         <div className="flex items-center gap-1.5">
           <button
             type="button"
             onClick={() => setTab('realtime')}
-            className={`px-3 py-1.5 rounded-lg font-medium transition-colors ${
+            className={`px-3.5 py-1.5 rounded-xl font-semibold transition-all ${
               tab === 'realtime'
-                ? 'bg-[#17212B] text-white dark:bg-[#B6F36A] dark:text-[#0B0F14]'
-                : 'text-[#677482] dark:text-[#8B97A5] hover:bg-[#F7F9FB] dark:hover:bg-[#1B232D]'
+                ? 'sig-btn-primary'
+                : 'text-[#637369] dark:text-[#8FA398] hover:bg-[#EAF0EC] dark:hover:bg-[#19241E]'
             }`}
           >
             Live Pair Signals ({liveRows.length})
@@ -163,34 +162,34 @@ export const LiveSignalsView: React.FC = () => {
           <button
             type="button"
             onClick={() => setTab('events')}
-            className={`px-3 py-1.5 rounded-lg font-medium transition-colors ${
+            className={`px-3.5 py-1.5 rounded-xl font-semibold transition-all ${
               tab === 'events'
-                ? 'bg-[#17212B] text-white dark:bg-[#B6F36A] dark:text-[#0B0F14]'
-                : 'text-[#677482] dark:text-[#8B97A5] hover:bg-[#F7F9FB] dark:hover:bg-[#1B232D]'
+                ? 'sig-btn-primary'
+                : 'text-[#637369] dark:text-[#8FA398] hover:bg-[#EAF0EC] dark:hover:bg-[#19241E]'
             }`}
           >
             Confirmed Signal History ({events.length})
           </button>
         </div>
 
-        <div className="flex items-center gap-4 font-mono text-xs tabular-nums">
-          <span className="text-[#16A378] dark:text-[#35C89A] font-semibold">BUY: {buyCount}</span>
-          <span className="text-[#DC4C54] dark:text-[#F16B72] font-semibold">SELL: {sellCount}</span>
-          <span className="text-[#677482] dark:text-[#8B97A5]">
+        <div className="flex items-center gap-4 font-mono text-xs tabular-nums sig-glass-subtle px-3.5 py-1.5 rounded-full">
+          <span className="text-[#15803D] dark:text-[#4ADE80] font-semibold">BUY: {buyCount}</span>
+          <span className="text-[#BE123C] dark:text-[#FB7185] font-semibold">SELL: {sellCount}</span>
+          <span className="text-[#637369] dark:text-[#9CB0A4]">
             WAIT: {Math.max(0, liveRows.length - buyCount - sellCount)}
           </span>
         </div>
       </div>
 
       {/* Filter Bar */}
-      <div className="rounded-xl border border-[#E6EBF0] dark:border-[#27313C] bg-[#FFFFFF] dark:bg-[#151B23] p-3 flex flex-wrap items-center gap-2.5 text-xs">
+      <div className="sig-glass rounded-2xl p-3 flex flex-wrap items-center gap-2.5 text-xs">
         <input
           type="text"
           value={assetFilter}
           onChange={(e) => setAssetFilter(e.target.value)}
           placeholder="Symbol e.g. BTCUSDT"
           aria-label="Filter signals by symbol"
-          className="w-40 px-2.5 py-1.5 rounded-lg border border-[#E6EBF0] dark:border-[#27313C] bg-[#F7F9FB] dark:bg-[#10151C] font-mono"
+          className="w-40 px-3 py-1.5 rounded-xl sig-glass-subtle font-mono text-[#111814] dark:text-[#F4F7F5] placeholder-[#637369] dark:placeholder-[#8FA398]"
         />
 
         {tab === 'realtime' && (
@@ -203,32 +202,32 @@ export const LiveSignalsView: React.FC = () => {
                 setExchange(ex);
                 if (ex !== 'bybit' && marketType === 'perpetual') setMarketType('spot');
               }}
-              className="px-2.5 py-1.5 rounded-lg border border-[#E6EBF0] dark:border-[#27313C] bg-[#F7F9FB] dark:bg-[#10151C]"
+              className="px-3 py-1.5 rounded-xl sig-glass-subtle text-[#111814] dark:text-[#F4F7F5]"
             >
-              <option value="binance">Binance</option>
-              <option value="bybit">Bybit</option>
-              <option value="kraken">Kraken</option>
-              <option value="coinbase">Coinbase</option>
+              <option value="binance" className="bg-white dark:bg-[#131C17]">Binance</option>
+              <option value="bybit" className="bg-white dark:bg-[#131C17]">Bybit</option>
+              <option value="kraken" className="bg-white dark:bg-[#131C17]">Kraken</option>
+              <option value="coinbase" className="bg-white dark:bg-[#131C17]">Coinbase</option>
             </select>
 
             <select
               aria-label="Signals market type"
               value={marketType}
               onChange={(e) => setMarketType(e.target.value as MarketType)}
-              className="px-2.5 py-1.5 rounded-lg border border-[#E6EBF0] dark:border-[#27313C] bg-[#F7F9FB] dark:bg-[#10151C]"
+              className="px-3 py-1.5 rounded-xl sig-glass-subtle text-[#111814] dark:text-[#F4F7F5]"
             >
-              <option value="spot">Spot</option>
-              {exchange === 'bybit' && <option value="perpetual">Perpetual</option>}
+              <option value="spot" className="bg-white dark:bg-[#131C17]">Spot</option>
+              {exchange === 'bybit' && <option value="perpetual" className="bg-white dark:bg-[#131C17]">Perpetual</option>}
             </select>
 
             <select
               aria-label="Signals timeframe"
               value={timeframe}
               onChange={(e) => setTimeframe(e.target.value as Timeframe)}
-              className="px-2.5 py-1.5 rounded-lg border border-[#E6EBF0] dark:border-[#27313C] bg-[#F7F9FB] dark:bg-[#10151C] font-mono"
+              className="px-3 py-1.5 rounded-xl sig-glass-subtle font-mono text-[#111814] dark:text-[#F4F7F5]"
             >
               {QUICK_TIMEFRAMES.map((tf) => (
-                <option key={tf} value={tf}>
+                <option key={tf} value={tf} className="bg-white dark:bg-[#131C17]">
                   {tf}
                 </option>
               ))}
@@ -240,15 +239,15 @@ export const LiveSignalsView: React.FC = () => {
           aria-label="Filter by direction"
           value={dirFilter}
           onChange={(e) => setDirFilter(e.target.value as DirectionFilter)}
-          className="px-2.5 py-1.5 rounded-lg border border-[#E6EBF0] dark:border-[#27313C] bg-[#F7F9FB] dark:bg-[#10151C]"
+          className="px-3 py-1.5 rounded-xl sig-glass-subtle text-[#111814] dark:text-[#F4F7F5]"
         >
-          <option value="ALL">All Directions</option>
-          <option value="BUY">BUY (Long) Only</option>
-          <option value="SELL">SELL (Short) Only</option>
-          <option value="WAIT">Neutral / Wait</option>
+          <option value="ALL" className="bg-white dark:bg-[#131C17]">All Directions</option>
+          <option value="BUY" className="bg-white dark:bg-[#131C17]">BUY (Long) Only</option>
+          <option value="SELL" className="bg-white dark:bg-[#131C17]">SELL (Short) Only</option>
+          <option value="WAIT" className="bg-white dark:bg-[#131C17]">Neutral / Wait</option>
         </select>
 
-        <label className="inline-flex items-center gap-2 text-[#677482] dark:text-[#8B97A5]">
+        <label className="inline-flex items-center gap-2 text-[#637369] dark:text-[#8FA398]">
           Min Agreement: {minAgreement}%
           <input
             type="range"
@@ -257,11 +256,11 @@ export const LiveSignalsView: React.FC = () => {
             step={10}
             value={minAgreement}
             onChange={(e) => setMinAgreement(Number(e.target.value))}
-            className="accent-[#6B9F30] dark:accent-[#B6F36A]"
+            className="accent-[#16A34A]"
           />
         </label>
 
-        <span className="ml-auto font-mono text-[#677482] dark:text-[#8B97A5]">
+        <span className="ml-auto font-mono text-[#637369] dark:text-[#8FA398]">
           {tab === 'realtime' ? `${filteredRealtime.length} pairs` : `${filteredEvents.length} events`}
         </span>
       </div>
@@ -275,7 +274,7 @@ export const LiveSignalsView: React.FC = () => {
         </div>
       ) : tab === 'realtime' ? (
         filteredRealtime.length === 0 ? (
-          <div className="rounded-xl border border-[#E6EBF0] dark:border-[#27313C] bg-[#FFFFFF] dark:bg-[#151B23] p-8 text-center text-xs text-[#677482] dark:text-[#8B97A5]">
+          <div className="sig-glass rounded-2xl p-8 text-center text-xs text-[#637369] dark:text-[#8FA398]">
             No live pair signals match the selected filters. Adjust direction or agreement filters above.
           </div>
         ) : (
@@ -297,7 +296,7 @@ export const LiveSignalsView: React.FC = () => {
           </div>
         )
       ) : filteredEvents.length === 0 ? (
-        <div className="rounded-xl border border-[#E6EBF0] dark:border-[#27313C] bg-[#FFFFFF] dark:bg-[#151B23] p-8 text-center text-xs text-[#677482] dark:text-[#8B97A5]">
+        <div className="sig-glass rounded-2xl p-8 text-center text-xs text-[#637369] dark:text-[#8FA398]">
           No confirmed signal history events match the current filter.
         </div>
       ) : (

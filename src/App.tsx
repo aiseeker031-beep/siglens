@@ -7,27 +7,13 @@ import { useAppStore } from './store/useAppStore';
 
 import { OverviewView } from './views/OverviewView';
 import { MarketsView } from './views/MarketsView';
-import { AssetExplorerView } from './views/AssetExplorerView';
 import { LiveSignalsView } from './views/LiveSignalsView';
 import { ScreenerView } from './views/ScreenerView';
-import { AlertsView } from './views/AlertsView';
 import { AIResearchView } from './views/AIResearchView';
 import { SettingsView } from './views/SettingsView';
 
-const ChartStudioView = lazy(() =>
-  import('./views/ChartStudioView').then((m) => ({ default: m.ChartStudioView })),
-);
 const HeatmapsView = lazy(() =>
   import('./views/HeatmapsView').then((m) => ({ default: m.HeatmapsView })),
-);
-const DerivativesView = lazy(() =>
-  import('./views/DerivativesView').then((m) => ({ default: m.DerivativesView })),
-);
-const DefiView = lazy(() =>
-  import('./views/DefiView').then((m) => ({ default: m.DefiView })),
-);
-const CompareView = lazy(() =>
-  import('./views/CompareView').then((m) => ({ default: m.CompareView })),
 );
 
 class ViewErrorBoundary extends React.Component<
@@ -56,7 +42,7 @@ class ViewErrorBoundary extends React.Component<
           <div className="font-bold text-sm text-[#DC4C54] dark:text-[#F16B72]">
             Workspace View Encountered an Error
           </div>
-          <p className="text-[#677482] dark:text-[#8B97A5]">{this.state.message}</p>
+          <p className="text-[#756253] dark:text-[#C5B1A0]">{this.state.message}</p>
           <button
             type="button"
             onClick={() => this.setState({ hasError: false, message: '' })}
@@ -107,24 +93,12 @@ export function App() {
         return <OverviewView />;
       case 'markets':
         return <MarketsView />;
-      case 'explorer':
-        return <AssetExplorerView />;
       case 'signals':
         return <LiveSignalsView />;
       case 'screener':
         return <ScreenerView />;
-      case 'studio3d':
-        return <ChartStudioView />;
       case 'heatmaps':
         return <HeatmapsView />;
-      case 'derivatives':
-        return <DerivativesView />;
-      case 'defi':
-        return <DefiView />;
-      case 'compare':
-        return <CompareView />;
-      case 'alerts':
-        return <AlertsView />;
       case 'ai':
         return <AIResearchView />;
       case 'settings':

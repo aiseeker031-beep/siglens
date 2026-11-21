@@ -272,7 +272,7 @@ export async function evaluateAlertsAgainstScan(rows: ScreenerRow[]): Promise<Al
         method: 'POST',
         signal: AbortSignal.timeout(5000),
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ source: 'CRYPTOLENS', event: ev }),
+        body: JSON.stringify({ source: 'SIGLENS', event: ev }),
       }).catch(() => {});
     }
   }

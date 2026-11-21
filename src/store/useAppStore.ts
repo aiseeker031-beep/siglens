@@ -41,7 +41,7 @@ interface AppState {
   initialized: boolean;
 
   setActiveSection: (section: NavSection) => void;
-  selectMarket: (exchange: ExchangeId, marketType: MarketType, symbol: string, openExplorer?: boolean) => void;
+  selectMarket: (exchange: ExchangeId, marketType: MarketType, symbol: string, openOverview?: boolean) => void;
   setExchange: (exchange: ExchangeId) => void;
   setMarketType: (marketType: MarketType) => void;
   setTimeframe: (tf: Timeframe) => void;
@@ -86,7 +86,7 @@ export const useAppStore = create<AppState>((set, get) => ({
 
   setActiveSection: (section) => set({ activeSection: section, mobileNavOpen: false }),
 
-  selectMarket: (exchange, marketType, symbol, openExplorer = true) => {
+  selectMarket: (exchange, marketType, symbol, openOverview = true) => {
     const supportedTypes = EXCHANGE_MARKET_TYPES[exchange];
     const safeType = supportedTypes.includes(marketType) ? marketType : supportedTypes[0];
     const supportedTfs = EXCHANGE_TIMEFRAMES[exchange];
@@ -97,7 +97,7 @@ export const useAppStore = create<AppState>((set, get) => ({
       marketType: safeType,
       symbol: symbol.toUpperCase(),
       timeframe: safeTf,
-      activeSection: openExplorer ? 'explorer' : get().activeSection,
+      activeSection: openOverview ? 'overview' : get().activeSection,
       commandSearchOpen: false,
     });
   },
