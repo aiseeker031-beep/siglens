@@ -13,6 +13,12 @@ import type {
   MarketType,
   MultiTimeframeSummary,
   OrderBookSnapshot,
+  PaperAccountConfig,
+  PaperArenaSnapshot,
+  PaperBotDirectionMode,
+  PaperPosition,
+  PaperSide,
+  PaperStrategyBot,
   ProviderStatus,
   ScreenerPreset,
   ScreenerRow,
@@ -306,5 +312,91 @@ export const api = {
     }>('/api/ai/analyze', {
       method: 'POST',
       body: JSON.stringify(payload),
+    }),
+
+  // --- Autonomous Paper-Trading Bot & Strategy Arena ---
+  getPaperState: (refresh = true) =>
+    apiJson<PaperArenaSnapshot>(`/api/paper/state?refresh=${refresh}`),
+
+  updatePaperAccount: (patch: Partial<PaperAccountConfig>) =>
+    apiJson<{ account: PaperAccountConfig }>('/api/paper/account', {
+      method: 'PUT',
+      body: JSON.stringify(patch),
+    }),
+
+  createPaperBot: (payload: {
+    name: string;
+    description?: string;
+    exchange: ExchangeId;
+    marketType?: MarketType;
+    timeframe: Timeframe;
+    enabled?: boolean;
+    directionMode?: PaperBotDirectionMode;
+    minScore?: number;
+    minAgreementPct?: number;
+    riskPerTradePct?: number;
+    leverage?: number;
+    trailingStopAtrMult?: number | null;
+    partialTp1Pct?: number;
+    cooldownMinutes?: number;
+  }) =>
+    apiJson<{ bot: PaperStrategyBot }>('/api/paper/bots', {
+      method: 'POST',
+      body: JSON.stringify(payload),
+    }),
+
+  updatePaperBot: (id: string, patch: Partial<PaperStrategyBot>) =>
+    apiJson<{ bot: PaperStrategyBot }>(`/api/paper/bots/${encodeURIComponent(id)}`, {
+      method: 'PATCH',
+      body: JSON.stringify(patch),
+    }),
+
+  deletePaperBot: (id: string) =>
+    apiJson<{ ok: boolean }>(`/api/paper/bots/${encodeURIComponent(id)}`, {
+      method: 'DELETE',
+    }),
+
+  runPaperTick: () =>
+    apiJson<{
+      result: { markedCount: number; actionsTaken: number; timestamp: number };
+      snapshot: PaperArenaSnapshot;
+    }>('/api/paper/tick', { method: 'POST' }),
+
+  openPaperOrder: (payload: {
+    exchange: ExchangeId;
+    marketType?: MarketType;
+    symbol: string;
+    timeframe?: Timeframe;
+    side: PaperSide;
+    riskPct?: number;
+    notionalUsd?: number;
+    leverage?: number;
+    stopLoss?: number | null;
+    tp1?: number | null;
+    tp2?: number | null;
+    tp3?: number | null;
+    entryReason?: string;
+  }) =>
+    apiJson<{ position: PaperPosition; snapshot: PaperArenaSnapshot }>('/api/paper/order', {
+      method: 'POST',
+      body: JSON.stringify(payload),
+    }),
+
+  closePaperPosition: (id: string) =>
+    apiJson<{ position: PaperPosition; snapshot: PaperArenaSnapshot }>(
+      `/api/paper/positions/${encodeURIComponent(id)}/close`,
+      { method: 'POST' },
+    ),
+
+  emergencyStopPaper: () =>
+    apiJson<{
+      summary: { closedCount: number; pausedBots: number };
+      snapshot: PaperArenaSnapshot;
+    }>('/api/paper/emergency-stop', { method: 'POST' }),
+
+  resetPaperAccount: (startingBalanceUsd = 10000) =>
+    apiJson<{ snapshot: PaperArenaSnapshot }>('/api/paper/reset', {
+      method: 'POST',
+      body: JSON.stringify({ startingBalanceUsd }),
     }),
 };

@@ -1,6 +1,8 @@
 import React, { useEffect, useMemo, useState } from 'react';
+import { AnimatePresence, motion } from 'motion/react';
 import {
   Activity,
+  ArrowUpRight,
   BarChart2,
   ChevronDown,
   Coins,
@@ -9,8 +11,15 @@ import {
   RefreshCw,
 } from 'lucide-react';
 import type { EChartsOption } from 'echarts';
-import amberCryptoImg from '../assets/images/amber_crypto_sculpture_1795240978092.jpg';
 import { EChartBox } from '../components/charts/EChartBox';
+import {
+  KINETIC_EASE,
+  KINETIC_SPRING,
+  KineticCard,
+  KineticMeterBar,
+  KineticPrice,
+  KineticSegmentedControl,
+} from '../components/ui/Kinetic';
 import { SkeletonBlock } from '../components/ui/SignalMeter';
 import { api, type AssetSignalBundle } from '../services/api';
 import {
@@ -30,28 +39,50 @@ import { useAppStore } from '../store/useAppStore';
 
 type WatchlistMode = 'watchlist' | 'gainers' | 'losers' | 'volume';
 
-const HERO_TIMEFRAMES: { tf: Timeframe; label: string }[] = [
-  { tf: '15m', label: '15M' },
-  { tf: '1h', label: '1H' },
-  { tf: '4h', label: '4H' },
-  { tf: '1d', label: '1D' },
+const HERO_TIMEFRAMES: { value: Timeframe; label: string }[] = [
+  { value: '15m', label: '15M' },
+  { value: '1h', label: '1H' },
+  { value: '4h', label: '4H' },
+  { value: '1d', label: '1D' },
+];
+
+const WATCHLIST_MODES: { value: WatchlistMode; label: string }[] = [
+  { value: 'watchlist', label: 'Watchlist' },
+  { value: 'gainers', label: 'Gainers' },
+  { value: 'losers', label: 'Losers' },
+  { value: 'volume', label: 'Volume' },
 ];
 
 function coinBadgeStyle(base: string): { bg: string; glyph: string } {
   const b = base.toUpperCase();
-  if (b === 'BTC') return { bg: 'bg-[#F7931A] text-white', glyph: '₿' };
-  if (b === 'ETH') return { bg: 'bg-[#627EEA] text-white', glyph: 'Ξ' };
-  if (b === 'SOL') return { bg: 'bg-gradient-to-br from-[#00FFA3] to-[#DC1FFF] text-[#0B0705]', glyph: 'S' };
-  if (b === 'BNB') return { bg: 'bg-[#F3BA2F] text-[#1D150F]', glyph: 'B' };
-  if (b === 'XRP') return { bg: 'bg-[#2C3E50] text-white', glyph: '✕' };
-  if (b === 'DOGE') return { bg: 'bg-[#C2A633] text-[#1D150F]', glyph: 'Ð' };
-  if (b === 'AVAX') return { bg: 'bg-[#E84142] text-white', glyph: 'A' };
-  return { bg: 'bg-[#EA731E] text-white', glyph: b.slice(0, 1) || '•' };
+  if (b === 'BTC') return { bg: 'bg-[#0A0D14] text-white', glyph: '₿' };
+  if (b === 'ETH') return { bg: 'bg-[#2563EB] text-white', glyph: 'Ξ' };
+  if (b === 'SOL') return { bg: 'bg-[#059669] text-white', glyph: 'S' };
+  if (b === 'BNB') return { bg: 'bg-[#D97706] text-white', glyph: 'B' };
+  if (b === 'XRP') return { bg: 'bg-[#334155] text-white', glyph: '✕' };
+  if (b === 'DOGE') return { bg: 'bg-[#B45309] text-white', glyph: 'Ð' };
+  if (b === 'AVAX') return { bg: 'bg-[#E11D48] text-white', glyph: 'A' };
+  if (b === 'AAPL' || b === 'MSFT' || b === 'NVDA' || b === 'TSLA' || b === 'META' || b === 'AMZN' || b === 'GOOGL') {
+    return { bg: 'bg-[#0A0D14] text-white', glyph: b.slice(0, 2) };
+  }
+  if (b === 'SPY' || b === 'QQQ' || b === 'US500' || b === 'NAS100' || b === 'US30' || b === 'GER40' || b === 'UK100' || b === 'JPN225') {
+    return { bg: 'bg-[#2563EB] text-white', glyph: b.slice(0, 2) };
+  }
+  if (b === 'XAU' || b === 'XAG' || b === 'COPPER') {
+    return { bg: 'bg-[#B45309] text-white', glyph: b.slice(0, 2) };
+  }
+  if (b === 'WTI' || b === 'BRENT' || b === 'NATGAS') {
+    return { bg: 'bg-[#0F172A] text-white', glyph: b.slice(0, 2) };
+  }
+  if (b === 'EUR' || b === 'GBP' || b === 'USD' || b === 'AUD') {
+    return { bg: 'bg-[#059669] text-white', glyph: b.slice(0, 2) };
+  }
+  return { bg: 'bg-[#1E293B] text-white', glyph: b.slice(0, 2) || '•' };
 }
 
-const GlowSparkline: React.FC<{ data: number[]; positive: boolean }> = ({ data, positive }) => {
+const KineticSparkline: React.FC<{ data: number[]; positive: boolean }> = ({ data, positive }) => {
   if (data.length < 2) {
-    return <span className="text-[11px] font-mono text-[#756253] dark:text-[#B9A392]">—</span>;
+    return <span className="text-[11px] font-mono text-[#7C8798]">—</span>;
   }
   const min = Math.min(...data);
   const max = Math.max(...data);
@@ -65,13 +96,13 @@ const GlowSparkline: React.FC<{ data: number[]; positive: boolean }> = ({ data, 
       return `${x.toFixed(1)},${y.toFixed(1)}`;
     })
     .join(' ');
-  const stroke = positive ? '#22E59B' : '#FF747B';
+  const stroke = positive ? '#059669' : '#E11D48';
   return (
     <svg viewBox={`0 0 ${w} ${h}`} preserveAspectRatio="none" className="w-20 h-7 shrink-0">
       <polyline
         fill="none"
         stroke={stroke}
-        strokeWidth="2"
+        strokeWidth="1.85"
         strokeLinejoin="round"
         strokeLinecap="round"
         points={pts}
@@ -101,15 +132,15 @@ export const OverviewView: React.FC = () => {
   const [watchlistMode, setWatchlistMode] = useState<WatchlistMode>('watchlist');
   const [momentumInfoOpen, setMomentumInfoOpen] = useState(false);
 
-  const isDark =
-    preferences.theme === 'dark' ||
-    (preferences.theme === 'system' &&
-      typeof window !== 'undefined' &&
-      window.matchMedia('(prefers-color-scheme: dark)').matches);
-
-  // Sync hero symbol when exchange switches quote currency (e.g., BTC/USDT vs BTC/USD)
   useEffect(() => {
-    const defaultSym = exchange === 'kraken' || exchange === 'coinbase' ? 'BTC/USD' : 'BTC/USDT';
+    const defaultSym =
+      exchange === 'stocks'
+        ? 'AAPL/USD'
+        : exchange === 'cfds'
+          ? 'US500/USD'
+          : exchange === 'kraken' || exchange === 'coinbase'
+            ? 'BTC/USD'
+            : 'BTC/USDT';
     setHeroSymbol(activeSymbol.includes('/') ? activeSymbol : defaultSym);
   }, [exchange, activeSymbol]);
 
@@ -136,7 +167,6 @@ export const OverviewView: React.FC = () => {
     return () => window.clearInterval(id);
   }, [exchange, marketType]);
 
-  // Load real OHLCV & explainable Intelligent Signal for the active hero pair
   useEffect(() => {
     let cancelled = false;
     const loadHero = async () => {
@@ -178,7 +208,6 @@ export const OverviewView: React.FC = () => {
   const heroBase = heroSymbol.split('/')[0] || 'BTC';
   const heroCoinBadge = coinBadgeStyle(heroBase);
 
-  // Pair selector options (top leaders + current symbol)
   const heroPairOptions = useMemo(() => {
     const set = new Set<string>([heroSymbol]);
     (data?.leaders ?? []).forEach((l) => set.add(l.ticker.displaySymbol));
@@ -186,7 +215,7 @@ export const OverviewView: React.FC = () => {
     return Array.from(set).slice(0, 12);
   }, [heroSymbol, data?.leaders, allMarkets]);
 
-  // Sunset Valley glowing amber-orange area chart matching the reference aesthetic
+  // Crisp Minimal Kinetic Area Chart (Cobalt Precision on Gallery White)
   const heroChartOption: EChartsOption = useMemo(() => {
     const slice = heroCandles.slice(-64);
     const labels = slice.map((c) => {
@@ -203,18 +232,20 @@ export const OverviewView: React.FC = () => {
     const pad = Math.max((maxVal - minVal) * 0.14, maxVal * 0.002);
 
     return {
-      animation: false,
+      animation: true,
+      animationDuration: 420,
+      animationEasing: 'cubicOut',
       grid: { left: 10, right: 64, top: 18, bottom: 26 },
       tooltip: {
         trigger: 'axis',
-        backgroundColor: '#FFF7EE',
-        borderColor: 'rgba(234, 115, 30, 0.35)',
+        backgroundColor: '#0A0D14',
+        borderColor: '#1E2534',
         borderWidth: 1,
         padding: [8, 12],
-        textStyle: { color: '#1A110A', fontFamily: 'Plus Jakarta Sans, sans-serif' },
+        textStyle: { color: '#FFFFFF', fontFamily: 'Roboto, sans-serif' },
         axisPointer: {
           type: 'line',
-          lineStyle: { color: 'rgba(255, 180, 105, 0.45)', type: 'dashed' },
+          lineStyle: { color: 'rgba(37, 99, 235, 0.45)', type: 'dashed', width: 1.5 },
         },
         formatter: (params: unknown) => {
           const list = Array.isArray(params) ? params : [params];
@@ -222,8 +253,8 @@ export const OverviewView: React.FC = () => {
           const idx = item?.dataIndex ?? 0;
           const val = typeof item?.value === 'number' ? item.value : 0;
           return `<div style="text-align:center;">
-            <div style="font-size:11px;color:#735B49;margin-bottom:2px;">${fullDates[idx] ?? ''}</div>
-            <div style="font-family:IBM Plex Mono,monospace;font-size:15px;font-weight:700;color:#140C07;">$${formatPrice(val, preferences.decimalPrecision)}</div>
+            <div style="font-size:10px;color:#94A3B8;margin-bottom:2px;font-family:'Roboto',sans-serif;">${fullDates[idx] ?? ''}</div>
+            <div style="font-family:'Roboto',sans-serif;font-size:14px;font-weight:700;color:#FFFFFF;">$${formatPrice(val, preferences.decimalPrecision)}</div>
           </div>`;
         },
       },
@@ -234,14 +265,14 @@ export const OverviewView: React.FC = () => {
         axisLine: { show: false },
         axisTick: { show: false },
         axisLabel: {
-          color: isDark ? '#A89485' : '#756253',
-          fontFamily: 'IBM Plex Mono, monospace',
+          color: '#7C8798',
+          fontFamily: 'Roboto, sans-serif',
           fontSize: 10,
           interval: Math.max(Math.floor(labels.length / 6), 1),
         },
         splitLine: {
           show: true,
-          lineStyle: { color: isDark ? 'rgba(255, 182, 112, 0.06)' : 'rgba(130, 95, 65, 0.08)' },
+          lineStyle: { color: '#F1F3F7' },
         },
       },
       yAxis: {
@@ -253,35 +284,33 @@ export const OverviewView: React.FC = () => {
         axisLine: { show: false },
         axisTick: { show: false },
         axisLabel: {
-          color: isDark ? '#B9A392' : '#756253',
-          fontFamily: 'IBM Plex Mono, monospace',
+          color: '#7C8798',
+          fontFamily: 'Roboto, sans-serif',
           fontSize: 10,
           formatter: (v: number) =>
             v >= 1000 ? `${(v / 1000).toFixed(1)}K` : formatPrice(v, preferences.decimalPrecision),
         },
         splitLine: {
           show: true,
-          lineStyle: { color: isDark ? 'rgba(255, 182, 112, 0.08)' : 'rgba(130, 95, 65, 0.1)' },
+          lineStyle: { color: '#ECEFF4', type: 'dashed' },
         },
       },
       series: [
         {
           type: 'line',
-          smooth: 0.25,
+          smooth: 0.28,
           showSymbol: false,
           symbol: 'circle',
           symbolSize: 8,
           data: prices,
           itemStyle: {
-            color: '#FFF8F0',
-            borderColor: '#FF9124',
+            color: '#FFFFFF',
+            borderColor: '#2563EB',
             borderWidth: 2.5,
           },
           lineStyle: {
-            width: 2.5,
-            color: '#FF9124',
-            shadowColor: 'rgba(255, 145, 36, 0.55)',
-            shadowBlur: 12,
+            width: 2.25,
+            color: '#2563EB',
           },
           areaStyle: {
             color: {
@@ -291,18 +320,17 @@ export const OverviewView: React.FC = () => {
               x2: 0,
               y2: 1,
               colorStops: [
-                { offset: 0, color: 'rgba(244, 126, 26, 0.58)' },
-                { offset: 0.55, color: 'rgba(198, 76, 14, 0.24)' },
-                { offset: 1, color: 'rgba(24, 14, 8, 0.02)' },
+                { offset: 0, color: 'rgba(37, 99, 235, 0.16)' },
+                { offset: 0.65, color: 'rgba(37, 99, 235, 0.04)' },
+                { offset: 1, color: 'rgba(37, 99, 235, 0.0)' },
               ],
             },
           },
         },
       ],
     };
-  }, [heroCandles, heroTf, isDark, preferences.decimalPrecision, preferences.timezone]);
+  }, [heroCandles, heroTf, preferences.decimalPrecision, preferences.timezone]);
 
-  // Real indicator bar breakdown for the Intelligent Signal panel
   const activeReport =
     preferences.showLiveProvisional && heroBundle?.provisional
       ? heroBundle.provisional
@@ -327,7 +355,6 @@ export const OverviewView: React.FC = () => {
       .filter((x): x is NonNullable<typeof x> => Boolean(x));
     const list = picked.length >= 4 ? picked : activeReport.indicators.slice(0, 6);
     return list.map((ind) => {
-      // Convert evidence [-1, +1] into directional conviction strength 0..100%
       const strengthPct = Math.round(Math.min(98, Math.max(18, Math.abs(ind.evidence) * 70 + 28)));
       return {
         id: ind.id,
@@ -338,29 +365,26 @@ export const OverviewView: React.FC = () => {
     });
   }, [activeReport]);
 
-  // Watchlist / Top Movers rows
   const watchlistRows = useMemo(() => {
-    if (watchlistMode === 'gainers') return (data?.topGainers ?? []).slice(0, 5);
-    if (watchlistMode === 'losers') return (data?.topLosers ?? []).slice(0, 5);
-    if (watchlistMode === 'volume') return (data?.highestVolume ?? []).slice(0, 5);
+    if (watchlistMode === 'gainers') return (data?.topGainers ?? []).slice(0, 6);
+    if (watchlistMode === 'losers') return (data?.topLosers ?? []).slice(0, 6);
+    if (watchlistMode === 'volume') return (data?.highestVolume ?? []).slice(0, 6);
 
     const matched: MarketTicker[] = [];
     for (const cid of watchlist) {
       const tk = marketById.get(cid);
       if (tk) matched.push(tk);
     }
-    if (matched.length >= 3) return matched.slice(0, 5);
-    return (data?.leaders ?? []).map((l) => l.ticker).slice(0, 5);
+    if (matched.length >= 3) return matched.slice(0, 6);
+    return (data?.leaders ?? []).map((l) => l.ticker).slice(0, 6);
   }, [watchlistMode, data, watchlist, marketById]);
 
-  // Real Market Momentum calculation from breadthScore (-100..+100 -> 0..100%)
   const stats = data?.aggregateStats;
   const breadthScore = stats?.breadthScore ?? 0;
   const momentumPct = Math.round(Math.max(4, Math.min(96, (breadthScore + 100) / 2)));
   const momentumLabel =
     breadthScore >= 20 ? 'Bullish' : breadthScore <= -20 ? 'Bearish' : 'Neutral';
 
-  // 7 vertical momentum spectrum bars driven by real breadth + EMA50 + EMA200 telemetry
   const momentumBars = useMemo(() => {
     const ema50 = stats?.aboveEma50Pct ?? 50;
     const ema200 = stats?.aboveEma200Pct ?? 50;
@@ -383,50 +407,53 @@ export const OverviewView: React.FC = () => {
     }));
   }, [momentumPct, stats]);
 
-  // ECharts Treemap Performance Heatmap (below fold secondary view)
+  // Crisp Light-Surface ECharts Treemap
   const heatmapOption: EChartsOption = useMemo(() => {
     const stableBases = new Set([
       'USDC', 'USDT', 'FDUSD', 'USDE', 'USD1', 'RLUSD', 'TUSD', 'BUSD', 'DAI', 'USDP', 'USDG', 'PYUSD', 'EUR', 'EURI', 'TRY', 'AEUR',
     ]);
-    const top = allMarkets
-      .filter((m) => (m.quoteAsset === 'USDT' || m.quoteAsset === 'USD') && !stableBases.has(m.baseAsset))
-      .slice(0, 20);
+    const top = (
+      exchange === 'stocks' || exchange === 'cfds'
+        ? allMarkets
+        : allMarkets.filter((m) => (m.quoteAsset === 'USDT' || m.quoteAsset === 'USD') && !stableBases.has(m.baseAsset))
+    ).slice(0, 20);
     const items = top.map((t) => {
       const pct = t.change24hPct;
       const color =
         pct >= 4
-          ? '#168C63'
+          ? '#047857'
           : pct >= 1
-            ? '#1FA879'
+            ? '#059669'
             : pct >= 0
-              ? '#276B56'
+              ? '#10B981'
               : pct <= -4
-                ? '#B1383F'
+                ? '#BE123C'
                 : pct <= -1
-                  ? '#CE4C54'
-                  : '#7B393E';
+                  ? '#E11D48'
+                  : '#F43F5E';
       return {
         name: `${t.baseAsset}\n${pct >= 0 ? '+' : ''}${pct.toFixed(2)}%`,
-        value: Math.max(t.quoteVolume24h, 1),
+        value: Math.max(t.quoteVolume24h, 1_000_000),
         displaySymbol: t.displaySymbol,
         exchange: t.exchange,
         marketType: t.marketType,
         pct,
         price: t.lastPrice,
-        itemStyle: { color, borderColor: '#130B07', borderWidth: 2, gapWidth: 2 },
+        itemStyle: { color, borderColor: '#FFFFFF', borderWidth: 2, gapWidth: 2, borderRadius: 6 },
       };
     });
 
     return {
-      animation: false,
+      animation: true,
+      animationDuration: 360,
       tooltip: {
-        backgroundColor: '#1D120B',
-        borderColor: 'rgba(255, 174, 96, 0.28)',
-        textStyle: { color: '#FFF8F0', fontSize: 12 },
+        backgroundColor: '#0A0D14',
+        borderColor: '#1E2534',
+        textStyle: { color: '#FFFFFF', fontSize: 12 },
         formatter: (params: unknown) => {
           const p = (params as { data?: { displaySymbol?: string; price?: number; pct?: number; value?: number } }).data;
           if (!p?.displaySymbol) return '';
-          return `<div style="font-family:IBM Plex Mono,monospace;font-size:12px;">
+          return `<div style="font-family:'Roboto',sans-serif;font-size:12px;">
             <strong>${p.displaySymbol}</strong><br/>
             Price: $${formatPrice(p.price)}<br/>
             24h: ${formatPercent(p.pct)}<br/>
@@ -437,7 +464,6 @@ export const OverviewView: React.FC = () => {
       series: [
         {
           type: 'treemap',
-          animation: false,
           roam: false,
           nodeClick: false,
           breadcrumb: { show: false },
@@ -447,8 +473,8 @@ export const OverviewView: React.FC = () => {
           bottom: 0,
           label: {
             show: true,
-            color: '#FFF8F0',
-            fontFamily: 'IBM Plex Mono, monospace',
+            color: '#FFFFFF',
+            fontFamily: 'Roboto, sans-serif',
             fontSize: 11,
             fontWeight: 600,
           },
@@ -461,7 +487,7 @@ export const OverviewView: React.FC = () => {
   if (loading && !data) {
     return (
       <div className="space-y-5">
-        <div className="grid grid-cols-2 xl:grid-cols-4 gap-4">
+        <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4">
           {Array.from({ length: 4 }).map((_, i) => (
             <SkeletonBlock key={i} className="h-24" />
           ))}
@@ -471,9 +497,8 @@ export const OverviewView: React.FC = () => {
           <SkeletonBlock className="h-[420px] lg:col-span-5" />
         </div>
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-5">
-          <SkeletonBlock className="h-60 lg:col-span-3" />
-          <SkeletonBlock className="h-60 lg:col-span-5" />
-          <SkeletonBlock className="h-60 lg:col-span-4" />
+          <SkeletonBlock className="h-64 lg:col-span-7" />
+          <SkeletonBlock className="h-64 lg:col-span-5" />
         </div>
       </div>
     );
@@ -481,22 +506,23 @@ export const OverviewView: React.FC = () => {
 
   if (error && !data) {
     return (
-      <div className="sig-glass rounded-2xl p-8 text-center">
-        <h2 className="text-base font-semibold">Live Market Data Temporarily Unavailable</h2>
-        <p className="text-xs text-[#756253] dark:text-[#B9A392] mt-1">{error}</p>
+      <KineticCard className="rounded-2xl p-8 text-center">
+        <h2 className="text-base font-bold text-[#0A0D14]">Live Market Data Temporarily Unavailable</h2>
+        <p className="text-xs text-[#64748B] mt-1">{error}</p>
         <button
           type="button"
           onClick={loadOverview}
-          className="mt-4 px-4 py-2 text-xs font-semibold rounded-xl sig-btn-primary"
+          className="mt-4 px-4 py-2 text-xs font-semibold rounded-full sig-btn-primary"
         >
           Retry Connection
         </button>
-      </div>
+      </KineticCard>
     );
   }
 
   const fearGreed = data?.fearAndGreed;
-  const fgPositive = (fearGreed?.value ?? 50) >= 50;
+  const fgVal = fearGreed?.value ?? 50;
+  const fgPositive = fgVal >= 50;
   const activeSignalsCount = Math.max(
     (stats?.bullishCount ?? 0) + (stats?.bearishCount ?? 0),
     data?.recentSignals?.length ?? 0,
@@ -506,113 +532,158 @@ export const OverviewView: React.FC = () => {
 
   return (
     <div className="space-y-5">
-      {/* ROW 1: 4 Warm Glass KPI Cards (Matching Sunset Valley Header Strip) */}
+      {/* ROW 1: 4 Minimal Kinetic Telemetry KPI Tiles */}
       <section aria-label="Market Summary Metrics" className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4">
-        {/* Card 1: Exchange Liquidity / BTC-ETH Share */}
-        <div className="sig-glass rounded-2xl px-4 py-3.5 flex items-center gap-3.5">
-          <div className="w-11 h-11 rounded-xl bg-gradient-to-br from-[#F28C28]/25 to-[#8C3B0C]/30 border border-[#FFA95C]/25 flex items-center justify-center text-[#FF9B3D] shrink-0">
-            <Coins className="w-5 h-5" />
+        {/* KPI 1: Top Leaders Liquidity Share */}
+        <KineticCard delay={0} interactive className="rounded-2xl px-4 py-4 flex flex-col justify-between gap-3">
+          <div className="flex items-center justify-between gap-2">
+            <span className="text-[11px] font-semibold uppercase tracking-[0.06em] text-[#64748B]">
+              {exchange === 'stocks'
+                ? 'NVDA / AAPL Vol Share'
+                : exchange === 'cfds'
+                  ? 'CFD Instruments'
+                  : 'BTC / ETH Vol Share'}
+            </span>
+            <span className="w-8 h-8 rounded-xl bg-[#F2F4F7] border border-[#E6E8EE] flex items-center justify-center text-[#0A0D14]">
+              <Coins className="w-4 h-4" />
+            </span>
           </div>
-          <div className="min-w-0 flex-1">
-            <div className="text-xs text-[#756253] dark:text-[#C5B1A0] truncate">
-              BTC / ETH Vol Share
-            </div>
-            <div className="flex items-baseline gap-2 mt-0.5 flex-wrap">
-              <span className="text-xl font-bold font-mono tabular-nums text-[#1D150F] dark:text-[#FFF8F0]">
-                {stats?.btcDominanceProxy !== null ? `${stats?.btcDominanceProxy}%` : '—'}
-              </span>
-              <span className="text-xs font-mono font-semibold text-[#12A875] dark:text-[#22E59B]">
-                ETH {stats?.ethDominanceProxy !== null ? `${stats?.ethDominanceProxy}%` : '—'}
-              </span>
-            </div>
+          <div className="space-y-2">
+            {exchange === 'cfds' ? (
+              <div className="flex items-baseline justify-between gap-2">
+                <span className="text-2xl font-extrabold font-mono tabular-nums tracking-tight text-[#0A0D14]">
+                  {stats?.trackedAssets ?? 0}
+                </span>
+                <span className="text-xs font-mono font-semibold text-[#2563EB]">
+                  Indices · Metals · FX
+                </span>
+              </div>
+            ) : (
+              <>
+                <div className="flex items-baseline justify-between gap-2">
+                  <span className="text-2xl font-extrabold font-mono tabular-nums tracking-tight text-[#0A0D14]">
+                    {stats?.btcDominanceProxy !== null ? `${stats?.btcDominanceProxy}%` : '—'}
+                  </span>
+                  <span className="text-xs font-mono font-semibold text-[#2563EB]">
+                    {exchange === 'stocks' ? 'AAPL' : 'ETH'}{' '}
+                    {stats?.ethDominanceProxy !== null ? `${stats?.ethDominanceProxy}%` : '—'}
+                  </span>
+                </div>
+                <div className="flex h-1.5 rounded-full bg-[#ECEFF4] overflow-hidden gap-0.5">
+                  <motion.div
+                    initial={{ width: 0 }}
+                    animate={{ width: `${Math.min(100, stats?.btcDominanceProxy ?? 0)}%` }}
+                    transition={{ duration: 0.55, ease: KINETIC_EASE }}
+                    className="h-full bg-[#0A0D14] rounded-full"
+                  />
+                  <motion.div
+                    initial={{ width: 0 }}
+                    animate={{ width: `${Math.min(100, stats?.ethDominanceProxy ?? 0)}%` }}
+                    transition={{ duration: 0.55, delay: 0.08, ease: KINETIC_EASE }}
+                    className="h-full bg-[#2563EB] rounded-full"
+                  />
+                </div>
+              </>
+            )}
           </div>
-        </div>
+        </KineticCard>
 
-        {/* Card 2: 24h Volume */}
-        <div className="sig-glass rounded-2xl px-4 py-3.5 flex items-center gap-3.5">
-          <div className="w-11 h-11 rounded-xl bg-gradient-to-br from-[#F28C28]/25 to-[#8C3B0C]/30 border border-[#FFA95C]/25 flex items-center justify-center text-[#FF9B3D] shrink-0">
-            <BarChart2 className="w-5 h-5" />
+        {/* KPI 2: 24h Volume / Session Activity */}
+        <KineticCard delay={0.04} interactive className="rounded-2xl px-4 py-4 flex flex-col justify-between gap-3">
+          <div className="flex items-center justify-between gap-2">
+            <span className="text-[11px] font-semibold uppercase tracking-[0.06em] text-[#64748B]">
+              {exchange === 'cfds' ? 'CFD Breadth (>EMA50)' : `24h Volume (${exchange})`}
+            </span>
+            <span className="w-8 h-8 rounded-xl bg-[#F2F4F7] border border-[#E6E8EE] flex items-center justify-center text-[#0A0D14]">
+              <BarChart2 className="w-4 h-4" />
+            </span>
           </div>
-          <div className="min-w-0 flex-1">
-            <div className="text-xs text-[#756253] dark:text-[#C5B1A0] truncate">
-              24h Volume ({exchange})
-            </div>
-            <div className="flex items-baseline gap-2 mt-0.5 flex-wrap">
-              <span className="text-xl font-bold font-mono tabular-nums text-[#1D150F] dark:text-[#FFF8F0]">
-                {formatCompactUsd(stats?.exchangeVolume24hUsd)}
-              </span>
-              <span className="text-xs font-mono font-semibold text-[#12A875] dark:text-[#22E59B]">
-                {stats?.trackedAssets ?? 0} pairs
-              </span>
-            </div>
+          <div className="flex items-baseline justify-between gap-2">
+            <span className="text-2xl font-extrabold font-mono tabular-nums tracking-tight text-[#0A0D14]">
+              {exchange === 'cfds'
+                ? `${stats?.aboveEma50Pct ?? 0}%`
+                : formatCompactUsd(stats?.exchangeVolume24hUsd)}
+            </span>
+            <span className="px-2 py-0.5 rounded-full bg-[#F2F4F7] border border-[#E6E8EE] text-[11px] font-mono font-semibold text-[#4B5565]">
+              {stats?.trackedAssets ?? 0} {exchange === 'stocks' ? 'stocks' : exchange === 'cfds' ? 'cfds' : 'pairs'}
+            </span>
           </div>
-        </div>
+        </KineticCard>
 
-        {/* Card 3: Fear & Greed */}
-        <div className="sig-glass rounded-2xl px-4 py-3.5 flex items-center gap-3.5">
-          <div className="w-11 h-11 rounded-xl bg-gradient-to-br from-[#F28C28]/25 to-[#8C3B0C]/30 border border-[#FFA95C]/25 flex items-center justify-center text-[#FFB144] shrink-0">
-            <Gauge className="w-5 h-5" />
-          </div>
-          <div className="min-w-0 flex-1">
-            <div className="text-xs text-[#756253] dark:text-[#C5B1A0] truncate">
+        {/* KPI 3: Fear & Greed */}
+        <KineticCard delay={0.08} interactive className="rounded-2xl px-4 py-4 flex flex-col justify-between gap-3">
+          <div className="flex items-center justify-between gap-2">
+            <span className="text-[11px] font-semibold uppercase tracking-[0.06em] text-[#64748B]">
               Fear & Greed
-            </div>
-            <div className="flex items-center justify-between gap-2 mt-0.5">
-              <span className="text-xl font-bold font-mono tabular-nums text-[#1D150F] dark:text-[#FFF8F0]">
+            </span>
+            <span className="w-8 h-8 rounded-xl bg-[#F2F4F7] border border-[#E6E8EE] flex items-center justify-center text-[#0A0D14]">
+              <Gauge className="w-4 h-4" />
+            </span>
+          </div>
+          <div className="space-y-2">
+            <div className="flex items-center justify-between gap-2">
+              <span className="text-2xl font-extrabold font-mono tabular-nums tracking-tight text-[#0A0D14]">
                 {fearGreed ? fearGreed.value : '—'}
-                <span className="text-xs font-normal text-[#756253] dark:text-[#B9A392]">/100</span>
+                <span className="text-xs font-normal text-[#7C8798]">/100</span>
               </span>
               {fearGreed && (
                 <span
-                  className={`px-2.5 py-0.5 rounded-lg text-[11px] font-semibold whitespace-nowrap ${
+                  className={`px-2.5 py-0.5 rounded-full text-[11px] font-semibold whitespace-nowrap border ${
                     fgPositive
-                      ? 'bg-[#22E59B]/16 text-[#12A875] dark:text-[#22E59B] border border-[#22E59B]/35'
-                      : 'bg-[#F16B72]/16 text-[#DC4C54] dark:text-[#FF747B] border border-[#F16B72]/35'
+                      ? 'bg-[#ECFDF5] text-[#047857] border-[#A7F3D0]'
+                      : 'bg-[#FFF1F2] text-[#BE123C] border-[#FECDD3]'
                   }`}
                 >
                   {fearGreed.classification}
                 </span>
               )}
             </div>
+            <KineticMeterBar
+              pct={fgVal}
+              barClassName={fgPositive ? 'bg-[#059669]' : 'bg-[#E11D48]'}
+              delay={0.12}
+            />
           </div>
-        </div>
+        </KineticCard>
 
-        {/* Card 4: Active Signals */}
-        <button
-          type="button"
+        {/* KPI 4: Active Signals */}
+        <KineticCard
+          delay={0.12}
+          interactive
           onClick={() => setActiveSection('signals')}
-          className="sig-glass rounded-2xl px-4 py-3.5 flex items-center gap-3.5 text-left hover:border-[#EA731E]/55 transition-colors"
+          className="rounded-2xl px-4 py-4 flex flex-col justify-between gap-3 text-left group"
         >
-          <div className="w-11 h-11 rounded-xl bg-gradient-to-br from-[#F28C28]/25 to-[#8C3B0C]/30 border border-[#FFA95C]/25 flex items-center justify-center text-[#FF9B3D] shrink-0">
-            <Activity className="w-5 h-5" />
-          </div>
-          <div className="min-w-0 flex-1">
-            <div className="text-xs text-[#756253] dark:text-[#C5B1A0] truncate">
+          <div className="flex items-center justify-between gap-2 w-full">
+            <span className="text-[11px] font-semibold uppercase tracking-[0.06em] text-[#64748B]">
               Active Signals
-            </div>
-            <div className="flex items-baseline gap-2 mt-0.5 flex-wrap">
-              <span className="text-xl font-bold font-mono tabular-nums text-[#1D150F] dark:text-[#FFF8F0]">
-                {activeSignalsCount}
-              </span>
-              <span className="text-xs font-mono font-semibold text-[#12A875] dark:text-[#22E59B]">
-                {stats?.bullishCount ?? 0}B · {stats?.bearishCount ?? 0}S
-              </span>
-            </div>
+            </span>
+            <span className="w-8 h-8 rounded-xl bg-[#0A0D14] text-white flex items-center justify-center transition-transform duration-200 group-hover:scale-105">
+              <ArrowUpRight className="w-4 h-4 transition-transform duration-200 group-hover:translate-x-0.5 group-hover:-translate-y-0.5" />
+            </span>
           </div>
-        </button>
+          <div className="flex items-baseline justify-between gap-2 w-full">
+            <span className="text-2xl font-extrabold font-mono tabular-nums tracking-tight text-[#0A0D14]">
+              {activeSignalsCount}
+            </span>
+            <span className="text-xs font-mono font-semibold flex items-center gap-1.5">
+              <span className="text-[#059669]">{stats?.bullishCount ?? 0}B</span>
+              <span className="text-[#CBD5E1]">·</span>
+              <span className="text-[#E11D48]">{stats?.bearishCount ?? 0}S</span>
+            </span>
+          </div>
+        </KineticCard>
       </section>
 
-      {/* ROW 2: Hero 2-Column Split — Interactive Sunset Area Chart + Intelligent Signal Panel */}
+      {/* ROW 2: Signature 12-Column Split — Kinetic Price Canvas + Intelligent Signal Engine */}
       <section className="grid grid-cols-1 lg:grid-cols-12 gap-5 items-stretch">
-        {/* Left: Live Price Area Chart */}
-        <div className="lg:col-span-7 sig-glass rounded-2xl p-5 flex flex-col justify-between">
+        {/* Left (7 cols): Live Kinetic Price Area Chart */}
+        <KineticCard delay={0.1} className="lg:col-span-7 rounded-2xl p-5 flex flex-col justify-between">
           <div>
-            {/* Pair Header + Timeframe Pills */}
             <div className="flex flex-wrap items-start justify-between gap-3">
               <div className="space-y-1.5">
                 <div className="flex items-center gap-2.5">
                   <span
-                    className={`w-8 h-8 rounded-full flex items-center justify-center font-bold text-sm shadow-md ${heroCoinBadge.bg}`}
+                    className={`w-8 h-8 rounded-xl flex items-center justify-center font-bold text-sm shadow-sm ${heroCoinBadge.bg}`}
                   >
                     {heroCoinBadge.glyph}
                   </span>
@@ -621,27 +692,31 @@ export const OverviewView: React.FC = () => {
                       aria-label="Select hero chart pair"
                       value={heroSymbol}
                       onChange={(e) => setHeroSymbol(e.target.value)}
-                      className="appearance-none bg-transparent pr-6 text-lg font-bold tracking-tight text-[#1D150F] dark:text-[#FFF8F0] focus:outline-none cursor-pointer"
+                      className="appearance-none bg-transparent pr-6 text-lg font-extrabold tracking-tight text-[#0A0D14] focus:outline-none cursor-pointer"
                     >
                       {heroPairOptions.map((sym) => (
-                        <option key={sym} value={sym} className="bg-[#FFFBF6] dark:bg-[#19100A] text-sm">
+                        <option key={sym} value={sym} className="bg-white text-sm">
                           {sym}
                         </option>
                       ))}
                     </select>
-                    <ChevronDown className="w-4 h-4 -ml-5 pointer-events-none text-[#756253] dark:text-[#C5B1A0]" />
+                    <ChevronDown className="w-4 h-4 -ml-5 pointer-events-none text-[#7C8798]" />
                   </div>
                 </div>
 
                 <div className="flex items-baseline gap-3 pl-10">
-                  <span className="text-2xl sm:text-3xl font-extrabold font-mono tabular-nums text-[#1D150F] dark:text-[#FFF8F0]">
-                    {heroPrice ? `$${formatPrice(heroPrice, preferences.decimalPrecision)}` : '—'}
-                  </span>
+                  <KineticPrice
+                    value={heroPrice}
+                    formatted={
+                      heroPrice ? `$${formatPrice(heroPrice, preferences.decimalPrecision)}` : '—'
+                    }
+                    className="text-2xl sm:text-3xl font-extrabold tracking-tight text-[#0A0D14]"
+                  />
                   <span
-                    className={`text-sm font-mono font-semibold tabular-nums ${
+                    className={`px-2 py-0.5 rounded-full text-xs font-mono font-semibold tabular-nums ${
                       heroChangePct >= 0
-                        ? 'text-[#12A875] dark:text-[#22E59B]'
-                        : 'text-[#DC4C54] dark:text-[#FF747B]'
+                        ? 'bg-[#ECFDF5] text-[#059669]'
+                        : 'bg-[#FFF1F2] text-[#E11D48]'
                     }`}
                   >
                     {heroChangePct >= 0 ? '↑' : '↓'} {formatPercent(heroChangePct)}
@@ -649,107 +724,109 @@ export const OverviewView: React.FC = () => {
                 </div>
               </div>
 
-              {/* Timeframe Pill Switcher */}
-              <div className="flex items-center gap-1 p-1 rounded-full sig-glass-subtle">
-                {HERO_TIMEFRAMES.map(({ tf, label }) => {
-                  const active = heroTf === tf;
-                  return (
-                    <button
-                      key={tf}
-                      type="button"
-                      onClick={() => setHeroTf(tf)}
-                      className={`px-3 py-1 rounded-full text-xs font-mono font-semibold transition-all whitespace-nowrap ${
-                        active
-                          ? 'sig-btn-primary'
-                          : 'text-[#756253] dark:text-[#C5B1A0] hover:text-[#1D150F] dark:hover:text-[#FFF8F0]'
-                      }`}
-                    >
-                      {label}
-                    </button>
-                  );
-                })}
-              </div>
+              <KineticSegmentedControl
+                options={HERO_TIMEFRAMES}
+                value={heroTf}
+                onChange={setHeroTf}
+                layoutId="overview-hero-tf"
+              />
             </div>
 
-            {/* Warm Glowing Area Chart */}
-            <div className="mt-3 relative">
+            <div className="mt-4 relative">
               {heroLoading && heroCandles.length === 0 ? (
-                <SkeletonBlock className="h-[250px]" />
+                <SkeletonBlock className="h-[258px]" />
               ) : (
-                <EChartBox option={heroChartOption} height={252} />
+                <EChartBox option={heroChartOption} height={258} />
               )}
             </div>
           </div>
 
-          {/* Subtle Bottom Segmented Trend Progress Track + Launch Explorer */}
-          <div className="mt-3 pt-1 flex items-center justify-between gap-4">
-            <div className="flex-1 grid grid-cols-6 gap-2">
+          {/* Kinetic 6-Segment Velocity Track */}
+          <div className="mt-3 pt-3 border-t border-[#ECEFF4] flex items-center justify-between gap-4">
+            <span className="text-[10px] font-mono uppercase tracking-[0.08em] text-[#7C8798] shrink-0">
+              Velocity
+            </span>
+            <div className="flex-1 grid grid-cols-6 gap-1.5">
               {Array.from({ length: 6 }).map((_, idx) => {
                 const activeCount = Math.max(1, Math.round((momentumPct / 100) * 6));
-                const isEmerald = idx === Math.min(5, activeCount - 1) && sigDir === 'BUY';
-                const isCoral = idx === Math.min(5, activeCount - 1) && sigDir === 'SELL';
+                const isPeak = idx === Math.min(5, activeCount - 1);
                 const isLit = idx < activeCount;
+                const segColor =
+                  isPeak && sigDir === 'BUY'
+                    ? 'bg-[#059669]'
+                    : isPeak && sigDir === 'SELL'
+                      ? 'bg-[#E11D48]'
+                      : isLit
+                        ? 'bg-[#0A0D14]'
+                        : 'bg-[#ECEFF4]';
                 return (
-                  <div
+                  <motion.div
                     key={idx}
-                    className={`h-1.5 rounded-full transition-colors ${
-                      isEmerald
-                        ? 'bg-[#22E59B] shadow-[0_0_10px_#22E59B]'
-                        : isCoral
-                          ? 'bg-[#FF747B] shadow-[0_0_10px_#FF747B]'
-                          : isLit
-                            ? 'bg-[#EA731E]/65'
-                            : 'bg-[#DFCBB6] dark:bg-[#3A271B]/70'
-                    }`}
+                    initial={{ scaleX: 0 }}
+                    animate={{ scaleX: 1 }}
+                    transition={{ duration: 0.3, delay: idx * 0.04, ease: KINETIC_EASE }}
+                    style={{ transformOrigin: 'left center' }}
+                    className={`h-1.5 rounded-full transition-colors duration-300 ${segColor}`}
                   />
                 );
               })}
             </div>
+            <span className="text-[11px] font-mono font-semibold tabular-nums text-[#0A0D14] shrink-0">
+              {momentumPct}%
+            </span>
           </div>
-        </div>
+        </KineticCard>
 
-        {/* Right: INTELLIGENT SIGNAL Panel */}
-        <div className="lg:col-span-5 sig-glass rounded-2xl p-5 flex flex-col justify-between gap-4">
+        {/* Right (5 cols): Intelligent Signal Engine Bento */}
+        <KineticCard delay={0.14} className="lg:col-span-5 rounded-2xl p-5 flex flex-col justify-between gap-4">
           <div className="space-y-4">
-            {/* Header */}
             <div className="flex items-center justify-between gap-2">
               <div className="flex items-center gap-2">
-                <Activity className="w-5 h-5 text-[#FF9124]" />
-                <h2 className="text-sm font-extrabold tracking-[0.06em] uppercase text-[#1D150F] dark:text-[#FFF8F0]">
+                <span className="w-7 h-7 rounded-lg bg-[#0A0D14] text-white flex items-center justify-center">
+                  <Activity className="w-3.5 h-3.5" />
+                </span>
+                <h2 className="text-xs font-extrabold tracking-[0.08em] uppercase text-[#0A0D14]">
                   Intelligent Signal
                 </h2>
               </div>
-              <span className="font-mono text-[11px] text-[#756253] dark:text-[#B9A392]">
+              <span className="px-2.5 py-0.5 rounded-full bg-[#F2F4F7] border border-[#E6E8EE] font-mono text-[11px] font-medium text-[#4B5565]">
                 {heroSymbol.replace('/', '')} · {heroTf}
               </span>
             </div>
 
-            {/* Prominent Direction Box + Confidence Readout */}
+            {/* Direction Block + Agreement Readout */}
             <div className="grid grid-cols-2 gap-3">
-              <div
-                data-testid="hero-signal-direction"
-                className={`rounded-xl px-4 py-3 flex items-center justify-center text-2xl font-extrabold tracking-wider border ${
-                  sigDir === 'BUY'
-                    ? 'bg-[#12A875]/18 text-[#12A875] dark:text-[#22E59B] border-[#22E59B]/55 shadow-[0_0_24px_rgba(34,229,155,0.18)]'
-                    : sigDir === 'SELL'
-                      ? 'bg-[#DC4C54]/18 text-[#DC4C54] dark:text-[#FF747B] border-[#FF747B]/55 shadow-[0_0_24px_rgba(241,107,114,0.18)]'
-                      : 'bg-[#EA731E]/15 text-[#D96418] dark:text-[#FFB144] border-[#FFA95C]/45'
-                }`}
-              >
-                {sigDir}
-              </div>
+              <AnimatePresence mode="wait">
+                <motion.div
+                  key={`${heroSymbol}-${heroTf}-${sigDir}`}
+                  data-testid="hero-signal-direction"
+                  initial={{ opacity: 0, scale: 0.96 }}
+                  animate={{ opacity: 1, scale: 1 }}
+                  exit={{ opacity: 0, scale: 0.96 }}
+                  transition={{ duration: 0.22, ease: KINETIC_EASE }}
+                  className={`rounded-xl px-4 py-3 flex items-center justify-center text-2xl font-extrabold tracking-wider border ${
+                    sigDir === 'BUY'
+                      ? 'bg-[#ECFDF5] text-[#047857] border-[#A7F3D0]'
+                      : sigDir === 'SELL'
+                        ? 'bg-[#FFF1F2] text-[#BE123C] border-[#FECDD3]'
+                        : 'bg-[#F7F8FA] text-[#4B5565] border-[#DCE0E8]'
+                  }`}
+                >
+                  {sigDir}
+                </motion.div>
+              </AnimatePresence>
 
               <div className="rounded-xl sig-glass-subtle px-4 py-2.5 flex flex-col items-center justify-center">
-                <span className="text-[11px] font-medium text-[#756253] dark:text-[#C5B1A0]">
+                <span className="text-[10px] font-mono uppercase tracking-[0.08em] text-[#7C8798]">
                   Agreement
                 </span>
                 <span
                   className={`text-2xl font-extrabold font-mono tabular-nums ${
                     sigDir === 'BUY'
-                      ? 'text-[#12A875] dark:text-[#22E59B]'
+                      ? 'text-[#059669]'
                       : sigDir === 'SELL'
-                        ? 'text-[#DC4C54] dark:text-[#FF747B]'
-                        : 'text-[#D96418] dark:text-[#FFB144]'
+                        ? 'text-[#E11D48]'
+                        : 'text-[#0A0D14]'
                   }`}
                 >
                   {activeReport ? `${activeReport.agreement.agreementPct}%` : '—'}
@@ -757,27 +834,29 @@ export const OverviewView: React.FC = () => {
               </div>
             </div>
 
-            {/* 6 Horizontal Indicator Strength Bars */}
+            {/* 6 Kinetic Horizontal Indicator Strength Bars */}
             <div className="space-y-2.5">
-              {indicatorBars.map((bar) => {
+              {indicatorBars.map((bar, idx) => {
                 const fillClass =
                   bar.bias === 'BULLISH'
-                    ? 'bg-gradient-to-r from-[#13B981] to-[#28F0A5] shadow-[0_0_10px_rgba(34,229,155,0.35)]'
+                    ? 'bg-[#059669]'
                     : bar.bias === 'BEARISH'
-                      ? 'bg-gradient-to-r from-[#D94A52] to-[#FF747B] shadow-[0_0_10px_rgba(241,107,114,0.35)]'
-                      : 'bg-gradient-to-r from-[#C86419] to-[#FF9B3D]';
+                      ? 'bg-[#E11D48]'
+                      : 'bg-[#64748B]';
                 return (
                   <div key={bar.id} className="grid grid-cols-12 items-center gap-2.5 text-xs">
-                    <span className="col-span-5 text-[#4B3B2F] dark:text-[#EDE0D4] truncate">
+                    <span className="col-span-5 text-[#4B5565] font-medium truncate">
                       {bar.label}
                     </span>
-                    <div className="col-span-5 h-2 rounded-full bg-[#E8DDD1] dark:bg-[#2F2016] overflow-hidden">
-                      <div
-                        className={`h-full rounded-full transition-all duration-300 ${fillClass}`}
-                        style={{ width: `${bar.pct}%` }}
+                    <div className="col-span-5">
+                      <KineticMeterBar
+                        pct={bar.pct}
+                        barClassName={fillClass}
+                        heightClassName="h-2"
+                        delay={idx * 0.04}
                       />
                     </div>
-                    <span className="col-span-2 text-right font-mono tabular-nums text-[#4B3B2F] dark:text-[#FFF8F0]">
+                    <span className="col-span-2 text-right font-mono font-semibold tabular-nums text-[#0A0D14]">
                       {bar.pct}%
                     </span>
                   </div>
@@ -785,22 +864,22 @@ export const OverviewView: React.FC = () => {
               })}
             </div>
 
-            {/* Compact Live Entry / SL / TP1-TP3 Strip */}
+            {/* Compact Live Entry / SL / TP1 Strip */}
             {setup && setup.direction !== 'WAIT' && setup.stopLoss !== null && (
               <div className="rounded-xl sig-glass-subtle px-3 py-2 font-mono text-[11px] tabular-nums flex flex-wrap items-center justify-between gap-x-3 gap-y-1">
-                <span className="text-[#1D150F] dark:text-[#FFF8F0]">
+                <span className="text-[#0A0D14]">
                   Entry:{' '}
-                  <strong className="text-[#D96418] dark:text-[#FF9843]">
+                  <strong className="text-[#2563EB]">
                     {setup.entryMode === 'NOW'
                       ? `NOW $${formatPrice(heroPrice ?? setup.entryPrice, preferences.decimalPrecision)}`
                       : `$${formatPrice(setup.entryZoneLow, preferences.decimalPrecision)}–$${formatPrice(setup.entryZoneHigh, preferences.decimalPrecision)}`}
                   </strong>
                 </span>
-                <span className="text-[#DC4C54] dark:text-[#FF747B]">
+                <span className="text-[#E11D48] font-semibold">
                   SL: ${formatPrice(setup.stopLoss, preferences.decimalPrecision)}
                 </span>
                 {setup.takeProfits[0] && (
-                  <span className="text-[#12A875] dark:text-[#22E59B]">
+                  <span className="text-[#059669] font-semibold">
                     TP1: ${formatPrice(setup.takeProfits[0].price, preferences.decimalPrecision)}
                   </span>
                 )}
@@ -808,10 +887,9 @@ export const OverviewView: React.FC = () => {
             )}
           </div>
 
-          {/* Summary Footer */}
-          <div className="pt-2 border-t border-[#E8DDD1]/70 dark:border-[#FFA95C]/12 flex items-end justify-between gap-3">
-            <p className="text-xs leading-relaxed text-[#5C493C] dark:text-[#DFCDBE] line-clamp-2">
-              <span className="font-semibold text-[#D96418] dark:text-[#FF9843]">Summary: </span>
+          <div className="pt-3 border-t border-[#ECEFF4] flex items-end justify-between gap-3">
+            <p className="text-xs leading-relaxed text-[#4B5565] line-clamp-2">
+              <span className="font-bold text-[#0A0D14]">Summary: </span>
               {activeReport
                 ? `${activeReport.label} (${activeReport.regime.combinedLabel}). ${activeReport.supportingEvidence[0] ?? 'Multi-indicator confluence evaluated deterministically.'}`
                 : 'Computing deterministic multi-indicator confluence from live exchange candles.'}
@@ -819,65 +897,48 @@ export const OverviewView: React.FC = () => {
             <button
               type="button"
               onClick={() => setActiveSection('signals')}
-              className="text-[11px] font-semibold text-[#D96418] dark:text-[#FF9843] hover:underline whitespace-nowrap shrink-0"
+              className="text-[11px] font-bold text-[#2563EB] hover:text-[#1D4ED8] whitespace-nowrap shrink-0"
             >
               All Signals →
             </button>
           </div>
-        </div>
+        </KineticCard>
       </section>
 
-      {/* ROW 3: 3-Column Bottom Deck — Amber Coin Visual + Market Watchlist + Market Momentum */}
+      {/* ROW 3: Clean 12-Column Asymmetric Deck — Watchlist & Movers (7) + Kinetic Momentum (5) */}
       <section className="grid grid-cols-1 lg:grid-cols-12 gap-5 items-stretch">
-        {/* Left: Sculptural Amber-Bronze Coin Visual Tile */}
-        <div className="lg:col-span-3 relative rounded-2xl overflow-hidden border border-[#E4D6C7] dark:border-[#FFA95C]/22 min-h-[215px] bg-gradient-to-br from-[#3D1E0C] via-[#1C0F08] to-[#0D0704] shadow-[0_12px_34px_rgba(0,0,0,0.4)]">
-          <img
-            src={amberCryptoImg}
-            alt="Sculptural amber metallic digital asset visualization"
-            referrerPolicy="no-referrer"
-            className="w-full h-full object-cover object-center"
-          />
-        </div>
-
-        {/* Center: Market Watchlist Table */}
-        <div className="lg:col-span-5 sig-glass rounded-2xl p-5 flex flex-col">
-          <div className="flex items-center justify-between gap-2 mb-3">
-            <h2 className="text-base font-bold text-[#1D150F] dark:text-[#FFF8F0]">
-              Market Watchlist
-            </h2>
-            <select
-              aria-label="Watchlist view mode"
+        {/* Left (7 cols): Interactive Market Watchlist & Movers */}
+        <KineticCard delay={0.16} className="lg:col-span-7 rounded-2xl p-5 flex flex-col">
+          <div className="flex flex-wrap items-center justify-between gap-2 mb-3">
+            <div>
+              <h2 className="text-sm font-extrabold tracking-tight text-[#0A0D14]">
+                Market Watchlist
+              </h2>
+              <p className="text-[11px] text-[#7C8798]">
+                Click any pair to focus the live chart &amp; signal engine
+              </p>
+            </div>
+            <KineticSegmentedControl
+              options={WATCHLIST_MODES}
               value={watchlistMode}
-              onChange={(e) => setWatchlistMode(e.target.value as WatchlistMode)}
-              className="px-3 py-1 rounded-full sig-glass-subtle text-xs font-medium text-[#5C493C] dark:text-[#DECBB9]"
-            >
-              <option value="watchlist" className="bg-[#FFFBF6] dark:bg-[#19100A]">
-                Watchlist
-              </option>
-              <option value="gainers" className="bg-[#FFFBF6] dark:bg-[#19100A]">
-                Top Movers
-              </option>
-              <option value="losers" className="bg-[#FFFBF6] dark:bg-[#19100A]">
-                Top Losers
-              </option>
-              <option value="volume" className="bg-[#FFFBF6] dark:bg-[#19100A]">
-                High Volume
-              </option>
-            </select>
+              onChange={setWatchlistMode}
+              layoutId="overview-watchlist-mode"
+              size="xs"
+            />
           </div>
 
           <div className="overflow-x-auto flex-1">
             <table className="w-full text-xs">
               <thead>
-                <tr className="border-b border-[#E8DDD1] dark:border-[#FFA95C]/12 text-[#756253] dark:text-[#B9A392]">
-                  <th className="py-2 text-left font-medium">Pair</th>
-                  <th className="py-2 text-right font-medium">Price</th>
-                  <th className="py-2 text-right font-medium">24h Change</th>
-                  <th className="py-2 text-right font-medium">24h Vol</th>
-                  <th className="py-2 text-right font-medium hidden sm:table-cell">Trend</th>
+                <tr className="border-b border-[#ECEFF4] text-[#7C8798] text-[10px] font-mono uppercase tracking-[0.06em]">
+                  <th className="py-2 text-left font-semibold">Pair</th>
+                  <th className="py-2 text-right font-semibold">Price</th>
+                  <th className="py-2 text-right font-semibold">24h</th>
+                  <th className="py-2 text-right font-semibold">Volume</th>
+                  <th className="py-2 text-right font-semibold hidden sm:table-cell">Trend</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-[#E8DDD1]/60 dark:divide-[#FFA95C]/10 font-mono tabular-nums">
+              <tbody className="divide-y divide-[#F1F3F7] font-mono tabular-nums">
                 {watchlistRows.map((tk) => {
                   const live = liveTickers[tk.canonicalId];
                   const price = live?.lastPrice ?? tk.lastPrice;
@@ -894,40 +955,43 @@ export const OverviewView: React.FC = () => {
                     <tr
                       key={tk.canonicalId}
                       onClick={() => selectMarket(tk.exchange, tk.marketType, tk.displaySymbol, true)}
-                      className="cursor-pointer hover:bg-[#EFE4D7]/50 dark:hover:bg-[#2F1E13]/60 transition-colors"
+                      className="cursor-pointer hover:bg-[#F7F8FA] transition-colors group"
                     >
                       <td className="py-2.5 pr-2">
-                        <div className="flex items-center gap-2">
+                        <div className="flex items-center gap-2.5">
                           <span
-                            className={`w-6 h-6 rounded-full flex items-center justify-center text-[11px] font-bold shrink-0 ${badge.bg}`}
+                            className={`w-6 h-6 rounded-lg flex items-center justify-center text-[11px] font-bold shrink-0 ${badge.bg}`}
                           >
                             {badge.glyph}
                           </span>
-                          <span className="font-semibold text-[#1D150F] dark:text-[#FFF8F0] whitespace-nowrap">
+                          <span className="font-bold text-[#0A0D14] group-hover:text-[#2563EB] transition-colors whitespace-nowrap">
                             {tk.displaySymbol}
                           </span>
                         </div>
                       </td>
-                      <td className="py-2.5 text-right text-[#1D150F] dark:text-[#FFF8F0]">
-                        ${formatPrice(price, preferences.decimalPrecision)}
+                      <td className="py-2.5 text-right text-[#0A0D14] font-semibold">
+                        <KineticPrice
+                          value={price}
+                          formatted={`$${formatPrice(price, preferences.decimalPrecision)}`}
+                        />
                       </td>
                       <td className="py-2.5 text-right">
                         <span
-                          className={`inline-block px-2 py-0.5 rounded-md text-[11px] font-semibold ${
+                          className={`inline-block px-2 py-0.5 rounded-full text-[11px] font-semibold ${
                             pos
-                              ? 'bg-[#22E59B]/14 text-[#12A875] dark:text-[#22E59B]'
-                              : 'bg-[#F16B72]/14 text-[#DC4C54] dark:text-[#FF747B]'
+                              ? 'bg-[#ECFDF5] text-[#059669]'
+                              : 'bg-[#FFF1F2] text-[#E11D48]'
                           }`}
                         >
                           {pos ? '↑' : '↓'} {formatPercent(pct)}
                         </span>
                       </td>
-                      <td className="py-2.5 text-right text-[#756253] dark:text-[#C5B1A0]">
+                      <td className="py-2.5 text-right text-[#64748B]">
                         {formatCompactUsd(tk.quoteVolume24h)}
                       </td>
                       <td className="py-2.5 pl-2 hidden sm:table-cell">
                         <div className="flex justify-end">
-                          <GlowSparkline data={spark} positive={pos} />
+                          <KineticSparkline data={spark} positive={pos} />
                         </div>
                       </td>
                     </tr>
@@ -936,62 +1000,76 @@ export const OverviewView: React.FC = () => {
               </tbody>
             </table>
           </div>
-        </div>
+        </KineticCard>
 
-        {/* Right: Market Momentum Card */}
-        <div className="lg:col-span-4 sig-glass rounded-2xl p-5 flex flex-col justify-between">
+        {/* Right (5 cols): Kinetic Market Momentum Spectrum */}
+        <KineticCard delay={0.2} className="lg:col-span-5 rounded-2xl p-5 flex flex-col justify-between">
           <div className="flex items-center justify-between gap-2">
-            <h2 className="text-base font-bold text-[#1D150F] dark:text-[#FFF8F0]">
-              Market Momentum
-            </h2>
+            <div>
+              <h2 className="text-sm font-extrabold tracking-tight text-[#0A0D14]">
+                Market Momentum
+              </h2>
+              <p className="text-[11px] text-[#7C8798]">
+                Live breadth, EMA50 &amp; EMA200 structural velocity
+              </p>
+            </div>
             <button
               type="button"
               onClick={() => setMomentumInfoOpen((v) => !v)}
               aria-label="Market momentum formula details"
-              className="p-1 rounded-full text-[#756253] dark:text-[#B9A392] hover:text-[#1D150F] dark:hover:text-[#FFF8F0]"
+              className="p-1.5 rounded-full text-[#7C8798] hover:text-[#0A0D14] hover:bg-[#F2F4F7] transition-colors"
             >
               <Info className="w-4 h-4" />
             </button>
           </div>
 
-          {momentumInfoOpen && (
-            <p className="text-[11px] text-[#756253] dark:text-[#C5B1A0] mt-1">
-              Derived from live {exchange} 1h breadth ({stats?.bullishCount ?? 0} bullish /{' '}
-              {stats?.bearishCount ?? 0} bearish across {stats?.analyzedAssets ?? 0} pairs,{' '}
-              {stats?.aboveEma50Pct ?? 0}% above EMA 50).
-            </p>
-          )}
+          <AnimatePresence>
+            {momentumInfoOpen && (
+              <motion.p
+                initial={{ opacity: 0, height: 0 }}
+                animate={{ opacity: 1, height: 'auto' }}
+                exit={{ opacity: 0, height: 0 }}
+                className="text-[11px] text-[#4B5565] bg-[#F7F8FA] border border-[#E6E8EE] rounded-xl px-3 py-2 mt-2 overflow-hidden"
+              >
+                Derived from live {exchange} 1h breadth ({stats?.bullishCount ?? 0} bullish /{' '}
+                {stats?.bearishCount ?? 0} bearish across {stats?.analyzedAssets ?? 0} pairs,{' '}
+                {stats?.aboveEma50Pct ?? 0}% above EMA 50).
+              </motion.p>
+            )}
+          </AnimatePresence>
 
-          {/* Rising Spectrum Vertical Bars + Percentage Readout */}
-          <div className="my-4 flex items-end justify-between gap-4">
-            <div className="flex-1 flex items-end gap-2 h-28 pt-2">
+          {/* 7 Kinetic Vertical Spectrum Bars + Percentage Readout */}
+          <div className="my-5 flex items-end justify-between gap-5">
+            <div className="flex-1 flex items-end gap-2 h-32 pt-2">
               {momentumBars.map((bar, idx) => (
-                <div
-                  key={idx}
-                  className="flex-1 h-full flex items-end"
-                >
-                  <div
-                    className={`w-full rounded-t-md transition-all duration-300 ${
+                <div key={idx} className="flex-1 h-full flex items-end">
+                  <motion.div
+                    initial={{ scaleY: 0 }}
+                    animate={{ scaleY: bar.heightPct / 100 }}
+                    transition={{ duration: 0.55, delay: idx * 0.045, ease: KINETIC_EASE }}
+                    style={{ transformOrigin: 'bottom center' }}
+                    className={`w-full h-full rounded-t-lg ${
                       bar.isPeak
                         ? momentumLabel === 'Bearish'
-                          ? 'bg-gradient-to-t from-[#5C1A1F] via-[#E14D55] to-[#FF7B82] shadow-[0_0_16px_rgba(241,107,114,0.45)]'
-                          : 'bg-gradient-to-t from-[#0D5B3E] via-[#15C784] to-[#34F5A8] shadow-[0_0_16px_rgba(34,229,155,0.45)]'
-                        : 'bg-gradient-to-t from-[#26160C] via-[#9C4E19] to-[#E9862A]'
+                          ? 'bg-[#E11D48]'
+                          : momentumLabel === 'Bullish'
+                            ? 'bg-[#059669]'
+                            : 'bg-[#2563EB]'
+                        : 'bg-[#0A0D14]/85'
                     }`}
-                    style={{ height: `${bar.heightPct}%` }}
                   />
                 </div>
               ))}
             </div>
 
-            <div className="text-right shrink-0 space-y-1.5 pb-1">
+            <div className="text-right shrink-0 space-y-2 pb-1">
               <div
-                className={`text-3xl font-extrabold font-mono tabular-nums ${
+                className={`text-4xl font-extrabold font-mono tabular-nums tracking-tight ${
                   momentumLabel === 'Bullish'
-                    ? 'text-[#12A875] dark:text-[#22E59B]'
+                    ? 'text-[#059669]'
                     : momentumLabel === 'Bearish'
-                      ? 'text-[#DC4C54] dark:text-[#FF747B]'
-                      : 'text-[#D96418] dark:text-[#FFB144]'
+                      ? 'text-[#E11D48]'
+                      : 'text-[#0A0D14]'
                 }`}
               >
                 {momentumPct}%
@@ -999,10 +1077,10 @@ export const OverviewView: React.FC = () => {
               <span
                 className={`inline-block px-3 py-1 rounded-full text-xs font-semibold border ${
                   momentumLabel === 'Bullish'
-                    ? 'bg-[#22E59B]/16 text-[#12A875] dark:text-[#22E59B] border-[#22E59B]/40'
+                    ? 'bg-[#ECFDF5] text-[#047857] border-[#A7F3D0]'
                     : momentumLabel === 'Bearish'
-                      ? 'bg-[#F16B72]/16 text-[#DC4C54] dark:text-[#FF747B] border-[#F16B72]/40'
-                      : 'bg-[#F59E0B]/16 text-[#D96418] dark:text-[#FFB144] border-[#F59E0B]/40'
+                      ? 'bg-[#FFF1F2] text-[#BE123C] border-[#FECDD3]'
+                      : 'bg-[#F2F4F7] text-[#4B5565] border-[#DCE0E8]'
                 }`}
               >
                 {momentumLabel}
@@ -1010,32 +1088,33 @@ export const OverviewView: React.FC = () => {
             </div>
           </div>
 
-          {/* Bearish — Neutral — Bullish Horizontal Spectrum Bar */}
+          {/* Bearish — Neutral — Bullish Precision Spectrum Track */}
           <div className="space-y-1.5">
-            <div className="relative h-2 rounded-full bg-gradient-to-r from-[#D94B52] via-[#F2A93B] to-[#22E59B]">
-              <div
-                className="absolute top-1/2 -translate-y-1/2 -translate-x-1/2 w-3.5 h-3.5 rounded-full bg-[#FFF8F0] border-2 border-[#22E59B] shadow-[0_0_10px_rgba(34,229,155,0.8)] transition-all duration-300"
-                style={{ left: `${momentumPct}%` }}
+            <div className="relative h-2 rounded-full bg-gradient-to-r from-[#E11D48] via-[#CBD5E1] to-[#059669]">
+              <motion.div
+                animate={{ left: `${momentumPct}%` }}
+                transition={KINETIC_SPRING}
+                className="absolute top-1/2 -translate-y-1/2 -translate-x-1/2 w-4 h-4 rounded-full bg-white border-2 border-[#0A0D14] shadow-md"
               />
             </div>
-            <div className="flex items-center justify-between text-[11px] font-medium text-[#756253] dark:text-[#C5B1A0]">
+            <div className="flex items-center justify-between text-[10px] font-mono uppercase tracking-[0.06em] text-[#7C8798]">
               <span>Bearish</span>
               <span>Neutral</span>
               <span>Bullish</span>
             </div>
           </div>
-        </div>
+        </KineticCard>
       </section>
 
-      {/* ROW 4 (Below the Fold): Performance Heatmap + Confirmed Signal Activity */}
+      {/* ROW 4: Performance Heatmap (8) + Confirmed Signal Activity (4) */}
       <section className="grid grid-cols-1 xl:grid-cols-12 gap-5">
-        <div className="xl:col-span-8 sig-glass rounded-2xl p-5">
+        <KineticCard delay={0.22} className="xl:col-span-8 rounded-2xl p-5">
           <div className="flex flex-wrap items-center justify-between gap-2 mb-3">
             <div>
-              <h2 className="text-sm font-bold text-[#1D150F] dark:text-[#FFF8F0]">
+              <h2 className="text-sm font-extrabold tracking-tight text-[#0A0D14]">
                 Performance Heatmap (24h Quote Volume)
               </h2>
-              <p className="text-[11px] text-[#756253] dark:text-[#B9A392]">
+              <p className="text-[11px] text-[#7C8798]">
                 {data?.exchangeCoverageNote}
               </p>
             </div>
@@ -1044,7 +1123,7 @@ export const OverviewView: React.FC = () => {
                 type="button"
                 onClick={loadOverview}
                 aria-label="Refresh overview data"
-                className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg sig-glass-subtle text-xs font-medium text-[#5C493C] dark:text-[#DECBB9]"
+                className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full sig-glass-subtle text-xs font-medium text-[#4B5565] hover:text-[#0A0D14] transition-colors"
               >
                 <RefreshCw className={`w-3 h-3 ${loading ? 'animate-spin' : ''}`} />
                 Refresh
@@ -1052,9 +1131,9 @@ export const OverviewView: React.FC = () => {
               <button
                 type="button"
                 onClick={() => setActiveSection('heatmaps')}
-                className="text-xs font-semibold text-[#D96418] dark:text-[#FF9843] hover:underline"
+                className="text-xs font-bold text-[#2563EB] hover:text-[#1D4ED8]"
               >
-                Full Heatmaps
+                Full Heatmaps →
               </button>
             </div>
           </div>
@@ -1068,24 +1147,24 @@ export const OverviewView: React.FC = () => {
               }
             }}
           />
-        </div>
+        </KineticCard>
 
-        <div className="xl:col-span-4 sig-glass rounded-2xl p-5 flex flex-col">
+        <KineticCard delay={0.26} className="xl:col-span-4 rounded-2xl p-5 flex flex-col">
           <div className="flex items-center justify-between mb-3">
-            <h2 className="text-sm font-bold text-[#1D150F] dark:text-[#FFF8F0]">
+            <h2 className="text-sm font-extrabold tracking-tight text-[#0A0D14]">
               Confirmed Signal Activity
             </h2>
             <button
               type="button"
               onClick={() => setActiveSection('signals')}
-              className="text-xs font-semibold text-[#D96418] dark:text-[#FF9843] hover:underline"
+              className="text-xs font-bold text-[#2563EB] hover:text-[#1D4ED8]"
             >
               Live Feed →
             </button>
           </div>
-          <div className="divide-y divide-[#E8DDD1]/60 dark:divide-[#FFA95C]/12 overflow-y-auto max-h-[260px]">
+          <div className="divide-y divide-[#F1F3F7] overflow-y-auto max-h-[260px]">
             {(data?.recentSignals ?? []).length === 0 ? (
-              <div className="py-8 text-center text-xs text-[#756253] dark:text-[#B9A392]">
+              <div className="py-8 text-center text-xs text-[#7C8798]">
                 Background scanner populates confirmed technical signals after candle validation.
               </div>
             ) : (
@@ -1100,43 +1179,43 @@ export const OverviewView: React.FC = () => {
                     key={ev.id}
                     type="button"
                     onClick={() => selectMarket(ev.exchange, ev.marketType, ev.displaySymbol, true)}
-                    className="w-full py-2.5 text-left hover:bg-[#EFE4D7]/40 dark:hover:bg-[#2F1E13]/50 px-1.5 rounded-lg transition-colors"
+                    className="w-full py-2.5 text-left hover:bg-[#F7F8FA] px-2 rounded-xl transition-colors"
                   >
                     <div className="flex items-center justify-between gap-2">
-                      <span className="font-mono text-xs font-semibold text-[#1D150F] dark:text-[#FFF8F0]">
+                      <span className="font-mono text-xs font-bold text-[#0A0D14]">
                         {compactSym} · {ev.timeframe}
                       </span>
-                      <span className={`px-2 py-0.5 rounded text-[10px] font-mono font-semibold ${signalBgClass(ev.classification)}`}>
+                      <span className={`px-2 py-0.5 rounded-full text-[10px] font-mono font-semibold ${signalBgClass(ev.classification)}`}>
                         {dirText}
                       </span>
                     </div>
                     {evSetup && evSetup.direction !== 'WAIT' && evSetup.entryPrice !== null && evSetup.stopLoss !== null ? (
                       <div className="mt-1 space-y-0.5 font-mono text-[10px] tabular-nums">
-                        <div className="text-[#4B3B2F] dark:text-[#EDE0D4]">
+                        <div className="text-[#4B5565]">
                           Entry: {evSetup.entryMode === 'NOW' ? `NOW $${formatPrice(evSetup.entryPrice)}` : `$${formatPrice(evSetup.entryZoneLow)}–$${formatPrice(evSetup.entryZoneHigh)}`}
                         </div>
                         <div className="flex flex-wrap gap-x-2.5 gap-y-0.5">
-                          <span className="text-[#DC4C54] dark:text-[#FF747B]">
+                          <span className="text-[#E11D48] font-semibold">
                             SL: ${formatPrice(evSetup.stopLoss)}
                           </span>
                           {evSetup.takeProfits[0] && (
-                            <span className="text-[#12A875] dark:text-[#22E59B]">
+                            <span className="text-[#059669] font-semibold">
                               TP1: ${formatPrice(evSetup.takeProfits[0].price)}
                             </span>
                           )}
                           {evSetup.takeProfits[1] && (
-                            <span className="text-[#12A875] dark:text-[#22E59B]">
+                            <span className="text-[#059669] font-semibold">
                               TP2: ${formatPrice(evSetup.takeProfits[1].price)}
                             </span>
                           )}
                         </div>
                       </div>
                     ) : (
-                      <div className="text-[11px] text-[#756253] dark:text-[#B9A392] mt-1 line-clamp-2">
+                      <div className="text-[11px] text-[#64748B] mt-1 line-clamp-2">
                         {ev.summary}
                       </div>
                     )}
-                    <div className="text-[10px] font-mono text-[#756253] dark:text-[#B9A392] mt-1">
+                    <div className="text-[10px] font-mono text-[#7C8798] mt-1">
                       {ev.exchange} · {formatTimestamp(ev.candleTimestamp, preferences.timezone, false)}
                     </div>
                   </button>
@@ -1144,7 +1223,7 @@ export const OverviewView: React.FC = () => {
               })
             )}
           </div>
-        </div>
+        </KineticCard>
       </section>
     </div>
   );

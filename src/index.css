@@ -1,48 +1,53 @@
 @import "tailwindcss";
-@custom-variant dark (&:where(.dark, .dark *));
+
+@theme {
+  --font-sans: 'Roboto', -apple-system, BlinkMacSystemFont, sans-serif;
+  --font-mono: 'Roboto', -apple-system, BlinkMacSystemFont, sans-serif;
+}
 
 @layer base {
   :root {
-    --bg-canvas: #F4F6F5;
-    --bg-sidebar: #0B120E;
-    --bg-card: #FFFFFF;
-    --bg-elevated: #F1F5F3;
-    --bg-sage: #DCE7DC;
-    --text-primary: #111814;
-    --text-secondary: #637369;
-    --border-subtle: #E5EAE7;
-    --accent: #16A34A;
-    --accent-bright: #22C55E;
-    --bullish: #16A34A;
+    color-scheme: light;
+    --bg-canvas: #F7F8FA;
+    --bg-surface: #FFFFFF;
+    --bg-elevated: #F2F4F7;
+    --bg-subtle: #ECEFF4;
+    --ink-primary: #0A0D14;
+    --ink-secondary: #4B5565;
+    --ink-muted: #7C8798;
+    --border-subtle: #E6E8EE;
+    --border-strong: #D3D8E2;
+    --accent: #0A0D14;
+    --accent-cobalt: #2563EB;
+    --bullish: #059669;
     --bearish: #E11D48;
-    --neutral: #64746B;
-  }
-
-  .dark {
-    --bg-canvas: #0E1411;
-    --bg-sidebar: #080E0B;
-    --bg-card: #131C17;
-    --bg-elevated: #1A251F;
-    --bg-sage: #16261C;
-    --text-primary: #F4F7F5;
-    --text-secondary: #8FA398;
-    --border-subtle: #213028;
-    --accent: #22C55E;
-    --accent-bright: #4ADE80;
-    --bullish: #22C55E;
-    --bearish: #FB7185;
-    --neutral: #8FA398;
+    --warning: #D97706;
   }
 
   html {
-    font-family: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, sans-serif;
-    font-feature-settings: "cv02", "cv03", "cv04", "cv11";
+    font-family: 'Roboto', -apple-system, BlinkMacSystemFont, sans-serif;
+    background-color: var(--bg-canvas);
+    color: var(--ink-primary);
+    scroll-behavior: smooth;
+  }
+
+  body,
+  button,
+  input,
+  select,
+  textarea {
+    font-family: 'Roboto', -apple-system, BlinkMacSystemFont, sans-serif;
+  }
+
+  body {
+    background-color: var(--bg-canvas);
+    color: var(--ink-primary);
   }
 
   .font-mono,
   code,
   pre {
-    font-family: 'IBM Plex Mono', ui-monospace, SFMono-Regular, Menlo, monospace;
+    font-family: 'Roboto', -apple-system, BlinkMacSystemFont, sans-serif;
     font-variant-numeric: tabular-nums;
   }
 
@@ -51,75 +56,148 @@
   }
 }
 
-/* Crisp Architectural Swiss SaaS Surfaces (Emerald-Obsidian & Alabaster Theme) */
+/* Minimal Kinetic Architectural Canvas */
+.sig-kinetic-canvas {
+  background-color: #F7F8FA;
+  background-image:
+    radial-gradient(circle at 18% 0%, rgba(37, 99, 235, 0.045) 0%, transparent 42%),
+    radial-gradient(circle at 86% 6%, rgba(5, 150, 105, 0.035) 0%, transparent 38%),
+    radial-gradient(#D5DAE4 0.85px, transparent 0.85px);
+  background-size: 100% 100%, 100% 100%, 24px 24px;
+  background-position: 0 0, 0 0, 12px 12px;
+}
+
+/* Primary Gallery Surface */
 .sig-glass {
   background: #FFFFFF;
-  border: 1px solid #E5EAE7;
-  box-shadow: 0 1px 3px rgba(12, 22, 16, 0.04);
+  border: 1px solid #E6E8EE;
+  box-shadow:
+    0 1px 2px rgba(10, 13, 20, 0.03),
+    0 8px 24px -14px rgba(10, 13, 20, 0.07);
+  transition:
+    border-color 200ms cubic-bezier(0.22, 1, 0.36, 1),
+    box-shadow 220ms cubic-bezier(0.22, 1, 0.36, 1),
+    transform 220ms cubic-bezier(0.22, 1, 0.36, 1);
 }
 
-.dark .sig-glass {
-  background: #131C17;
-  border: 1px solid #223028;
-  box-shadow: 0 8px 28px rgba(0, 0, 0, 0.34);
+.sig-glass-interactive:hover {
+  border-color: #CFD6E3;
+  box-shadow:
+    0 2px 6px rgba(10, 13, 20, 0.04),
+    0 14px 32px -14px rgba(10, 13, 20, 0.11);
 }
 
+/* Recessed Muted Track / Pill Surface */
 .sig-glass-subtle {
-  background: #F3F6F4;
-  border: 1px solid #E4EAE6;
+  background: #F2F4F7;
+  border: 1px solid #E6E8EE;
 }
 
-.dark .sig-glass-subtle {
-  background: #19241E;
-  border: 1px solid #25342C;
-}
-
-/* Signature Dark Obsidian-Emerald Featured Bento Card (stays deep carbon in both modes) */
-.sig-card-dark {
-  background: linear-gradient(145deg, #102017 0%, #0A110D 56%, #0D1A12 100%);
-  border: 1px solid rgba(34, 197, 94, 0.16);
-  color: #F4F8F5;
-  box-shadow: 0 10px 28px rgba(7, 16, 11, 0.18);
-}
-
-/* Signature Soft Sage-Mint Bento Highlight Card */
-.sig-card-sage {
-  background: linear-gradient(160deg, #DDE8DD 0%, #D1E1D2 100%);
-  border: 1px solid #C6D8C7;
-  color: #101A13;
-}
-
-.dark .sig-card-sage {
-  background: linear-gradient(160deg, #16261C 0%, #122017 100%);
-  border: 1px solid rgba(34, 197, 94, 0.22);
-  color: #F2F7F3;
-}
-
-/* Signature Primary CTA (Solid Obsidian in Light Mode, Crisp Emerald in Dark Mode) */
+/* Precision Carbon Primary CTA */
 .sig-btn-primary {
-  background: #121814;
+  background: #0A0D14;
   color: #FFFFFF;
-  box-shadow: 0 2px 10px rgba(12, 20, 16, 0.16);
-  transition: transform 150ms cubic-bezier(0.16, 1, 0.3, 1), background-color 150ms ease, box-shadow 150ms ease;
+  box-shadow:
+    0 1px 2px rgba(10, 13, 20, 0.14),
+    0 6px 16px -6px rgba(10, 13, 20, 0.24);
+  transition:
+    transform 160ms cubic-bezier(0.22, 1, 0.36, 1),
+    background-color 160ms ease,
+    box-shadow 180ms ease;
 }
 
 .sig-btn-primary:hover {
-  background: #1E2822;
-  box-shadow: 0 4px 14px rgba(12, 20, 16, 0.22);
+  background: #1B2230;
+  box-shadow:
+    0 2px 4px rgba(10, 13, 20, 0.16),
+    0 10px 22px -8px rgba(10, 13, 20, 0.3);
 }
 
-.dark .sig-btn-primary {
-  background: #22C55E;
-  color: #06140B;
-  box-shadow: 0 4px 16px rgba(34, 197, 94, 0.28);
+.sig-btn-primary:active {
+  transform: scale(0.98);
 }
 
-.dark .sig-btn-primary:hover {
-  background: #34D36E;
-  box-shadow: 0 6px 20px rgba(34, 197, 94, 0.36);
+/* Kinetic Shimmer Skeleton */
+@keyframes sig-shimmer {
+  0% {
+    background-position: -200% 0;
+  }
+  100% {
+    background-position: 200% 0;
+  }
 }
 
-/* Subtle clean scrollbar */
+.sig-skeleton {
+  background: linear-gradient(90deg, #EEF1F6 25%, #F8F9FC 50%, #EEF1F6 75%);
+  background-size: 200% 100%;
+  animation: sig-shimmer 1.6s cubic-bezier(0.4, 0, 0.2, 1) infinite;
+}
+
+/* Kinetic Live Sonar Pulse */
+@keyframes sig-sonar {
+  0% {
+    transform: scale(0.9);
+    opacity: 0.7;
+  }
+  100% {
+    transform: scale(2.4);
+    opacity: 0;
+  }
+}
+
+.sig-sonar-ring {
+  animation: sig-sonar 2s cubic-bezier(0.16, 1, 0.3, 1) infinite;
+}
+
+/* Kinetic Continuous Ticker Ribbon */
+@keyframes sig-marquee {
+  0% {
+    transform: translate3d(0, 0, 0);
+  }
+  100% {
+    transform: translate3d(-50%, 0, 0);
+  }
+}
+
+.sig-marquee-track {
+  display: flex;
+  width: max-content;
+  animation: sig-marquee 42s linear infinite;
+  will-change: transform;
+}
+
+.sig-marquee-track:hover {
+  animation-play-state: paused;
+}
+
+/* Directional Price Tick Impulse Flashes */
+@keyframes flash-up {
+  0% {
+    background-color: rgba(5, 150, 105, 0.16);
+  }
+  100% {
+    background-color: transparent;
+  }
+}
+
+@keyframes flash-down {
+  0% {
+    background-color: rgba(225, 29, 72, 0.14);
+  }
+  100% {
+    background-color: transparent;
+  }
+}
+
+.animate-flash-up {
+  animation: flash-up 0.65s cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+.animate-flash-down {
+  animation: flash-down 0.65s cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+/* Clean Minimal Scrollbar */
 ::-webkit-scrollbar {
   width: 6px;
   height: 6px;
@@ -130,52 +208,18 @@
 }
 
 ::-webkit-scrollbar-thumb {
-  background: rgba(99, 115, 105, 0.28);
-  border-radius: 3px;
+  background: rgba(124, 135, 152, 0.3);
+  border-radius: 9999px;
 }
 
 ::-webkit-scrollbar-thumb:hover {
-  background: rgba(22, 163, 74, 0.5);
-}
-
-@keyframes flash-up {
-  0% { background-color: rgba(34, 197, 94, 0.22); }
-  100% { background-color: transparent; }
-}
-
-@keyframes flash-down {
-  0% { background-color: rgba(225, 29, 72, 0.2); }
-  100% { background-color: transparent; }
-}
-
-.animate-flash-up {
-  animation: flash-up 0.65s ease-out;
-}
-
-.animate-flash-down {
-  animation: flash-down 0.65s ease-out;
-}
-
-@keyframes sig-kenburns {
-  0% {
-    transform: scale(1.015) translate3d(0%, 0%, 0);
-  }
-  50% {
-    transform: scale(1.06) translate3d(-0.8%, -0.5%, 0);
-  }
-  100% {
-    transform: scale(1.015) translate3d(0%, 0%, 0);
-  }
-}
-
-.sig-backdrop-kenburns {
-  animation: sig-kenburns 28s ease-in-out infinite;
-  will-change: transform;
+  background: rgba(10, 13, 20, 0.45);
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .sig-backdrop-kenburns {
+  .sig-marquee-track,
+  .sig-sonar-ring,
+  .sig-skeleton {
     animation: none;
-    transform: scale(1.02);
   }
 }

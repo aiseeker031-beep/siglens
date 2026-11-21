@@ -23,7 +23,6 @@ import type {
   UserPreferences,
 } from '../shared/types';
 import { useAppStore } from '../store/useAppStore';
-import type { BackdropCadence, BackdropMode } from '../utils/marketBackdrop';
 import {
   getSessionApiKey,
   hasEncryptedApiKey,
@@ -59,12 +58,6 @@ export const SettingsView: React.FC = () => {
   const preferences = useAppStore((s) => s.preferences);
   const updatePreferences = useAppStore((s) => s.updatePreferences);
   const wsFreshness = useAppStore((s) => s.wsFreshness);
-  const backdropMode = useAppStore((s) => s.backdropMode);
-  const backdropCadence = useAppStore((s) => s.backdropCadence);
-  const backdropPaused = useAppStore((s) => s.backdropPaused);
-  const setBackdropMode = useAppStore((s) => s.setBackdropMode);
-  const setBackdropCadence = useAppStore((s) => s.setBackdropCadence);
-  const setBackdropPaused = useAppStore((s) => s.setBackdropPaused);
 
   const [tab, setTab] = useState<SettingsTab>('general');
   const [savedNotice, setSavedNotice] = useState<string | null>(null);
@@ -261,12 +254,12 @@ export const SettingsView: React.FC = () => {
       <div className="flex flex-wrap items-end justify-between gap-3">
         <div>
           <h1 className="text-xl sm:text-2xl font-bold tracking-tight">Settings & Diagnostics</h1>
-          <p className="text-xs text-[#637369] dark:text-[#8FA398] mt-0.5">
+          <p className="text-xs text-[#64748B] mt-0.5">
             Configure workspace defaults, deterministic signal weights, optional BYOK AI providers, and monitor live exchange data adapters.
           </p>
         </div>
         {savedNotice && (
-          <div className="inline-flex items-center gap-1.5 text-xs font-medium text-[#15803D] dark:text-[#4ADE80]">
+          <div className="inline-flex items-center gap-1.5 text-xs font-medium text-[#047857]">
             <CheckCircle2 className="w-4 h-4" />
             {savedNotice}
           </div>
@@ -274,7 +267,7 @@ export const SettingsView: React.FC = () => {
       </div>
 
       {/* Tabs */}
-      <div className="flex flex-wrap gap-1.5 border-b border-[#E5EAE7] dark:border-[#213028] pb-2 text-xs">
+      <div className="flex flex-wrap gap-1.5 border-b border-[#E6E8EE] pb-2 text-xs">
         {(
           [
             ['general', 'General'],
@@ -292,7 +285,7 @@ export const SettingsView: React.FC = () => {
             className={`px-3 py-1.5 rounded-lg font-medium transition-colors ${
               tab === id
                 ? 'sig-btn-primary'
-                : 'text-[#637369] dark:text-[#8FA398] hover:bg-[#F3F6F4] dark:hover:bg-[#1D2A22]'
+                : 'text-[#64748B] hover:bg-[#F2F4F7]'
             }`}
           >
             {label}
@@ -302,26 +295,13 @@ export const SettingsView: React.FC = () => {
 
       {/* GENERAL TAB */}
       {tab === 'general' && (
-        <div className="rounded-xl border border-[#E5EAE7] dark:border-[#213028] bg-[#FFFFFF] dark:bg-[#131C17] p-5 grid grid-cols-1 md:grid-cols-2 gap-4 text-xs">
-          <label className="space-y-1.5">
-            <span className="font-semibold">Color Theme</span>
-            <select
-              value={preferences.theme}
-              onChange={(e) => handleSavePref({ theme: e.target.value as UserPreferences['theme'] })}
-              className="w-full px-3 py-2 rounded-lg border border-[#E5EAE7] dark:border-[#213028] bg-[#F3F6F4] dark:bg-[#19241E]"
-            >
-              <option value="dark">Dark (Institutional Default)</option>
-              <option value="light">Light (Clean Day Mode)</option>
-              <option value="system">System Preference</option>
-            </select>
-          </label>
-
+        <div className="rounded-xl border border-[#E6E8EE] bg-[#FFFFFF] p-5 grid grid-cols-1 md:grid-cols-2 gap-4 text-xs">
           <label className="space-y-1.5">
             <span className="font-semibold">Timestamp Display Timezone</span>
             <select
               value={preferences.timezone}
               onChange={(e) => handleSavePref({ timezone: e.target.value as 'UTC' | 'local' })}
-              className="w-full px-3 py-2 rounded-lg border border-[#E5EAE7] dark:border-[#213028] bg-[#F3F6F4] dark:bg-[#19241E]"
+              className="w-full px-3 py-2 rounded-lg border border-[#E6E8EE] bg-[#F2F4F7]"
             >
               <option value="UTC">UTC (Exchange Candle Standard)</option>
               <option value="local">Local Browser Timezone</option>
@@ -338,7 +318,7 @@ export const SettingsView: React.FC = () => {
                   decimalPrecision: v === 'auto' ? 'auto' : (Number(v) as 2 | 4 | 6),
                 });
               }}
-              className="w-full px-3 py-2 rounded-lg border border-[#E5EAE7] dark:border-[#213028] bg-[#F3F6F4] dark:bg-[#19241E]"
+              className="w-full px-3 py-2 rounded-lg border border-[#E6E8EE] bg-[#F2F4F7]"
             >
               <option value="auto">Adaptive (Auto by Asset Magnitude)</option>
               <option value="2">2 Decimal Places</option>
@@ -352,12 +332,14 @@ export const SettingsView: React.FC = () => {
             <select
               value={preferences.defaultExchange}
               onChange={(e) => handleSavePref({ defaultExchange: e.target.value as ExchangeId })}
-              className="w-full px-3 py-2 rounded-lg border border-[#E5EAE7] dark:border-[#213028] bg-[#F3F6F4] dark:bg-[#19241E]"
+              className="w-full px-3 py-2 rounded-lg border border-[#E6E8EE] bg-[#F2F4F7]"
             >
               <option value="binance">Binance</option>
               <option value="bybit">Bybit</option>
               <option value="kraken">Kraken</option>
               <option value="coinbase">Coinbase</option>
+              <option value="stocks">US Stocks</option>
+              <option value="cfds">Global CFDs</option>
             </select>
           </label>
 
@@ -366,7 +348,7 @@ export const SettingsView: React.FC = () => {
             <select
               value={preferences.defaultTimeframe}
               onChange={(e) => handleSavePref({ defaultTimeframe: e.target.value as Timeframe })}
-              className="w-full px-3 py-2 rounded-lg border border-[#E5EAE7] dark:border-[#213028] bg-[#F3F6F4] dark:bg-[#19241E]"
+              className="w-full px-3 py-2 rounded-lg border border-[#E6E8EE] bg-[#F2F4F7]"
             >
               {QUICK_TIMEFRAMES.map((tf) => (
                 <option key={tf} value={tf}>
@@ -376,10 +358,10 @@ export const SettingsView: React.FC = () => {
             </select>
           </label>
 
-          <div className="flex items-center justify-between rounded-lg border border-[#E5EAE7] dark:border-[#213028] bg-[#F3F6F4] dark:bg-[#19241E] px-3.5 py-2.5">
+          <div className="flex items-center justify-between rounded-lg border border-[#E6E8EE] bg-[#F2F4F7] px-3.5 py-2.5">
             <div>
               <div className="font-semibold">Compact Table Density</div>
-              <div className="text-[11px] text-[#637369] dark:text-[#8FA398]">
+              <div className="text-[11px] text-[#64748B]">
                 Tighter row height for high-density market tables
               </div>
             </div>
@@ -395,24 +377,24 @@ export const SettingsView: React.FC = () => {
 
       {/* CHARTS TAB */}
       {tab === 'charts' && (
-        <div className="rounded-xl border border-[#E5EAE7] dark:border-[#213028] bg-[#FFFFFF] dark:bg-[#131C17] p-5 space-y-4 text-xs">
+        <div className="rounded-xl border border-[#E6E8EE] bg-[#FFFFFF] p-5 space-y-4 text-xs">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <label className="space-y-1.5">
               <span className="font-semibold">Default Asset Explorer Chart Mode</span>
               <select
                 value={preferences.defaultChartMode}
                 onChange={(e) => handleSavePref({ defaultChartMode: e.target.value as '2d' | '3d' })}
-                className="w-full px-3 py-2 rounded-lg border border-[#E5EAE7] dark:border-[#213028] bg-[#F3F6F4] dark:bg-[#19241E]"
+                className="w-full px-3 py-2 rounded-lg border border-[#E6E8EE] bg-[#F2F4F7]"
               >
                 <option value="2d">2D Professional Chart (Lightweight Charts)</option>
                 <option value="3d">3D Interactive Financial Studio (Three.js)</option>
               </select>
             </label>
 
-            <div className="flex items-center justify-between rounded-lg border border-[#E5EAE7] dark:border-[#213028] bg-[#F3F6F4] dark:bg-[#19241E] px-3.5 py-2.5">
+            <div className="flex items-center justify-between rounded-lg border border-[#E6E8EE] bg-[#F2F4F7] px-3.5 py-2.5">
               <div>
                 <div className="font-semibold">Show Live Provisional (Forming Candle) Signal</div>
-                <div className="text-[11px] text-[#637369] dark:text-[#8FA398]">
+                <div className="text-[11px] text-[#64748B]">
                   Always displayed separately from confirmed closed-candle signals
                 </div>
               </div>
@@ -424,10 +406,10 @@ export const SettingsView: React.FC = () => {
               />
             </div>
 
-            <div className="flex items-center justify-between rounded-lg border border-[#E5EAE7] dark:border-[#213028] bg-[#F3F6F4] dark:bg-[#19241E] px-3.5 py-2.5">
+            <div className="flex items-center justify-between rounded-lg border border-[#E6E8EE] bg-[#F2F4F7] px-3.5 py-2.5">
               <div>
                 <div className="font-semibold">Reduced Motion & 3D Damping</div>
-                <div className="text-[11px] text-[#637369] dark:text-[#8FA398]">
+                <div className="text-[11px] text-[#64748B]">
                   Disables smooth orbit inertia and background slideshow drift
                 </div>
               </div>
@@ -439,65 +421,17 @@ export const SettingsView: React.FC = () => {
               />
             </div>
 
-            <label className="space-y-1.5">
-              <span className="font-semibold">Adaptive Background Slideshow Mode</span>
-              <select
-                value={backdropMode}
-                onChange={(e) => {
-                  setBackdropMode(e.target.value as BackdropMode);
-                  flashNotice('Background atmosphere updated');
-                }}
-                className="w-full px-3 py-2 rounded-lg border border-[#E5EAE7] dark:border-[#213028] bg-[#F3F6F4] dark:bg-[#19241E]"
-              >
-                <option value="auto">Auto-Sync to Live Market Conditions</option>
-                <option value="bullish">Preview: Bullish Momentum</option>
-                <option value="bearish">Preview: Bearish Pressure</option>
-                <option value="volatile">Preview: High Volatility</option>
-                <option value="neutral">Preview: Balanced Range</option>
-              </select>
-            </label>
-
-            <label className="space-y-1.5">
-              <span className="font-semibold">Slideshow Transition Cadence</span>
-              <select
-                value={backdropCadence}
-                onChange={(e) => {
-                  setBackdropCadence(e.target.value as BackdropCadence);
-                  flashNotice('Slideshow cadence updated');
-                }}
-                className="w-full px-3 py-2 rounded-lg border border-[#E5EAE7] dark:border-[#213028] bg-[#F3F6F4] dark:bg-[#19241E]"
-              >
-                <option value="calm">Calm (30 seconds)</option>
-                <option value="standard">Standard (16 seconds)</option>
-                <option value="dynamic">Dynamic (9 seconds)</option>
-              </select>
-            </label>
-
-            <div className="flex items-center justify-between rounded-lg border border-[#E5EAE7] dark:border-[#213028] bg-[#F3F6F4] dark:bg-[#19241E] px-3.5 py-2.5">
-              <div>
-                <div className="font-semibold">Pause Background Slideshow</div>
-                <div className="text-[11px] text-[#637369] dark:text-[#8FA398]">
-                  Hold on the current abstract minimal slide
-                </div>
-              </div>
-              <input
-                type="checkbox"
-                checked={backdropPaused}
-                onChange={(e) => setBackdropPaused(e.target.checked)}
-                className="h-4 w-4"
-              />
-            </div>
           </div>
         </div>
       )}
 
       {/* SIGNAL ENGINE TAB */}
       {tab === 'signals' && (
-        <div className="rounded-xl border border-[#E5EAE7] dark:border-[#213028] bg-[#FFFFFF] dark:bg-[#131C17] p-5 space-y-4 text-xs">
+        <div className="rounded-xl border border-[#E6E8EE] bg-[#FFFFFF] p-5 space-y-4 text-xs">
           <div className="flex flex-wrap items-center justify-between gap-2">
             <div>
               <h2 className="text-sm font-bold">Deterministic Signal Engine Weights</h2>
-              <p className="text-[11px] text-[#637369] dark:text-[#8FA398]">
+              <p className="text-[11px] text-[#64748B]">
                 Weights are automatically normalized across available indicators. ATR (14) acts as a non-directional volatility quality modifier (0.5x–1.0x).
               </p>
             </div>
@@ -508,7 +442,7 @@ export const SettingsView: React.FC = () => {
               <button
                 type="button"
                 onClick={() => handleSavePref({ weights: { ...DEFAULT_WEIGHTS } }, 'Weights reset to defaults')}
-                className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg border border-[#E5EAE7] dark:border-[#213028]"
+                className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg border border-[#E6E8EE]"
               >
                 <RotateCcw className="w-3 h-3" />
                 Reset Weights
@@ -520,11 +454,11 @@ export const SettingsView: React.FC = () => {
             {WEIGHT_LABELS.map(([key, label]) => (
               <div
                 key={key}
-                className="rounded-lg border border-[#E5EAE7] dark:border-[#213028] bg-[#F3F6F4] dark:bg-[#19241E] p-3 space-y-1.5"
+                className="rounded-lg border border-[#E6E8EE] bg-[#F2F4F7] p-3 space-y-1.5"
               >
                 <div className="flex items-center justify-between">
                   <span className="font-medium">{label}</span>
-                  <span className="font-mono font-bold text-[#15803D] dark:text-[#4ADE80]">
+                  <span className="font-mono font-bold text-[#047857]">
                     {preferences.weights[key]}
                   </span>
                 </div>
@@ -541,9 +475,9 @@ export const SettingsView: React.FC = () => {
             ))}
           </div>
 
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-3 pt-2 border-t border-[#E5EAE7] dark:border-[#213028]">
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-3 pt-2 border-t border-[#E6E8EE]">
             <label className="space-y-1">
-              <span className="text-[11px] text-[#637369] dark:text-[#8FA398]">Strong Bullish (&ge;)</span>
+              <span className="text-[11px] text-[#64748B]">Strong Bullish (&ge;)</span>
               <input
                 type="number"
                 value={preferences.thresholds.strongBullish}
@@ -552,11 +486,11 @@ export const SettingsView: React.FC = () => {
                     thresholds: { ...preferences.thresholds, strongBullish: Number(e.target.value) },
                   })
                 }
-                className="w-full px-2.5 py-1.5 rounded-lg border border-[#E5EAE7] dark:border-[#213028] bg-[#F3F6F4] dark:bg-[#19241E] font-mono"
+                className="w-full px-2.5 py-1.5 rounded-lg border border-[#E6E8EE] bg-[#F2F4F7] font-mono"
               />
             </label>
             <label className="space-y-1">
-              <span className="text-[11px] text-[#637369] dark:text-[#8FA398]">Bullish (&ge;)</span>
+              <span className="text-[11px] text-[#64748B]">Bullish (&ge;)</span>
               <input
                 type="number"
                 value={preferences.thresholds.bullish}
@@ -565,29 +499,29 @@ export const SettingsView: React.FC = () => {
                     thresholds: { ...preferences.thresholds, bullish: Number(e.target.value) },
                   })
                 }
-                className="w-full px-2.5 py-1.5 rounded-lg border border-[#E5EAE7] dark:border-[#213028] bg-[#F3F6F4] dark:bg-[#19241E] font-mono"
+                className="w-full px-2.5 py-1.5 rounded-lg border border-[#E6E8EE] bg-[#F2F4F7] font-mono"
               />
             </label>
             <label className="space-y-1">
-              <span className="text-[11px] text-[#637369] dark:text-[#8FA398]">Min Coverage (%)</span>
+              <span className="text-[11px] text-[#64748B]">Min Coverage (%)</span>
               <input
                 type="number"
                 min={30}
                 max={100}
                 value={preferences.minCoveragePct}
                 onChange={(e) => handleSavePref({ minCoveragePct: Number(e.target.value) })}
-                className="w-full px-2.5 py-1.5 rounded-lg border border-[#E5EAE7] dark:border-[#213028] bg-[#F3F6F4] dark:bg-[#19241E] font-mono"
+                className="w-full px-2.5 py-1.5 rounded-lg border border-[#E6E8EE] bg-[#F2F4F7] font-mono"
               />
             </label>
             <label className="space-y-1">
-              <span className="text-[11px] text-[#637369] dark:text-[#8FA398]">Min Strong Agreement (%)</span>
+              <span className="text-[11px] text-[#64748B]">Min Strong Agreement (%)</span>
               <input
                 type="number"
                 min={40}
                 max={100}
                 value={preferences.minAgreementForStrongPct}
                 onChange={(e) => handleSavePref({ minAgreementForStrongPct: Number(e.target.value) })}
-                className="w-full px-2.5 py-1.5 rounded-lg border border-[#E5EAE7] dark:border-[#213028] bg-[#F3F6F4] dark:bg-[#19241E] font-mono"
+                className="w-full px-2.5 py-1.5 rounded-lg border border-[#E6E8EE] bg-[#F2F4F7] font-mono"
               />
             </label>
           </div>
@@ -598,15 +532,15 @@ export const SettingsView: React.FC = () => {
       {tab === 'diagnostics' && (
         <div className="space-y-4">
           <div className="flex items-center justify-between text-xs">
-            <div className="text-[#637369] dark:text-[#8FA398]">
+            <div className="text-[#64748B]">
               Browser WebSocket Status:{' '}
-              <strong className="font-mono text-[#111814] dark:text-[#F4F7F5]">{wsFreshness}</strong>
+              <strong className="font-mono text-[#0A0D14]">{wsFreshness}</strong>
               {diagnostics ? ` · Server Uptime: ${Math.floor(diagnostics.uptimeSeconds / 60)}m` : ''}
             </div>
             <button
               type="button"
               onClick={loadDiagnostics}
-              className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-[#E5EAE7] dark:border-[#213028] bg-[#FFFFFF] dark:bg-[#131C17] font-medium"
+              className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-[#E6E8EE] bg-[#FFFFFF] font-medium"
             >
               <RefreshCw className={`w-3.5 h-3.5 ${diagLoading ? 'animate-spin' : ''}`} />
               Refresh Health
@@ -616,36 +550,36 @@ export const SettingsView: React.FC = () => {
           {diagnostics && (
             <>
               <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 text-xs">
-                <div className="rounded-xl border border-[#E5EAE7] dark:border-[#213028] bg-[#FFFFFF] dark:bg-[#131C17] p-3.5">
-                  <div className="text-[#637369] dark:text-[#8FA398]">SQLite Database Size</div>
+                <div className="rounded-xl border border-[#E6E8EE] bg-[#FFFFFF] p-3.5">
+                  <div className="text-[#64748B]">SQLite Database Size</div>
                   <div className="text-lg font-bold font-mono tabular-nums mt-0.5">
                     {(diagnostics.storage.dbSizeBytes / 1024).toFixed(1)} KB
                   </div>
                 </div>
-                <div className="rounded-xl border border-[#E5EAE7] dark:border-[#213028] bg-[#FFFFFF] dark:bg-[#131C17] p-3.5">
-                  <div className="text-[#637369] dark:text-[#8FA398]">Cached Candles</div>
+                <div className="rounded-xl border border-[#E6E8EE] bg-[#FFFFFF] p-3.5">
+                  <div className="text-[#64748B]">Cached Candles</div>
                   <div className="text-lg font-bold font-mono tabular-nums mt-0.5">
                     {diagnostics.storage.cachedCandles.toLocaleString()}
                   </div>
                 </div>
-                <div className="rounded-xl border border-[#E5EAE7] dark:border-[#213028] bg-[#FFFFFF] dark:bg-[#131C17] p-3.5">
-                  <div className="text-[#637369] dark:text-[#8FA398]">Persisted Signal Events</div>
+                <div className="rounded-xl border border-[#E6E8EE] bg-[#FFFFFF] p-3.5">
+                  <div className="text-[#64748B]">Persisted Signal Events</div>
                   <div className="text-lg font-bold font-mono tabular-nums mt-0.5">
                     {diagnostics.storage.signalEvents.toLocaleString()}
                   </div>
                 </div>
-                <div className="rounded-xl border border-[#E5EAE7] dark:border-[#213028] bg-[#FFFFFF] dark:bg-[#131C17] p-3.5">
-                  <div className="text-[#637369] dark:text-[#8FA398]">Active Alert Rules</div>
+                <div className="rounded-xl border border-[#E6E8EE] bg-[#FFFFFF] p-3.5">
+                  <div className="text-[#64748B]">Active Alert Rules</div>
                   <div className="text-lg font-bold font-mono tabular-nums mt-0.5">
                     {diagnostics.storage.alertRules}
                   </div>
                 </div>
               </div>
 
-              <div className="rounded-xl border border-[#E5EAE7] dark:border-[#213028] bg-[#FFFFFF] dark:bg-[#131C17] overflow-hidden">
+              <div className="rounded-xl border border-[#E6E8EE] bg-[#FFFFFF] overflow-hidden">
                 <table className="w-full text-xs">
                   <thead>
-                    <tr className="border-b border-[#E5EAE7] dark:border-[#213028] bg-[#F3F6F4] dark:bg-[#19241E] text-[11px] text-[#637369] dark:text-[#8FA398]">
+                    <tr className="border-b border-[#E6E8EE] bg-[#F2F4F7] text-[11px] text-[#64748B]">
                       <th className="text-left px-3 py-2 font-medium">Public Data Provider</th>
                       <th className="text-left px-3 py-2 font-medium">Status</th>
                       <th className="text-left px-3 py-2 font-medium">WebSocket</th>
@@ -654,7 +588,7 @@ export const SettingsView: React.FC = () => {
                       <th className="text-left px-3 py-2 font-medium">Last REST Success</th>
                     </tr>
                   </thead>
-                  <tbody className="divide-y divide-[#E8DDD1] dark:divide-[#22C55E]/14">
+                  <tbody className="divide-y divide-[#ECEFF4]">
                     {diagnostics.providers.map((p: ProviderStatus) => (
                       <tr key={p.id}>
                         <td className="px-3 py-2.5 font-semibold">{p.name}</td>
@@ -662,10 +596,10 @@ export const SettingsView: React.FC = () => {
                           <span
                             className={
                               p.status === 'LIVE'
-                                ? 'text-[#15803D] dark:text-[#4ADE80]'
+                                ? 'text-[#047857]'
                                 : p.status === 'DELAYED'
                                   ? 'text-[#E6A832]'
-                                  : 'text-[#637369] dark:text-[#8FA398]'
+                                  : 'text-[#64748B]'
                             }
                           >
                             {p.status}
@@ -680,7 +614,7 @@ export const SettingsView: React.FC = () => {
                         <td className="px-3 py-2.5 text-right font-mono tabular-nums">
                           {p.requestCount} / {p.errorCount}
                         </td>
-                        <td className="px-3 py-2.5 font-mono text-[11px] text-[#637369] dark:text-[#8FA398]">
+                        <td className="px-3 py-2.5 font-mono text-[11px] text-[#64748B]">
                           {formatTimestamp(p.lastRestSuccessAt, preferences.timezone, false)}
                         </td>
                       </tr>
@@ -696,26 +630,26 @@ export const SettingsView: React.FC = () => {
       {/* AI PROVIDERS BYOK TAB */}
       {tab === 'ai' && (
         <div className="space-y-4">
-          <div className="rounded-lg border border-[#E5EAE7] dark:border-[#213028] bg-[#F3F6F4] dark:bg-[#19241E] p-3.5 text-xs flex items-start gap-2.5">
-            <ShieldCheck className="w-4 h-4 text-[#15803D] dark:text-[#4ADE80] shrink-0 mt-0.5" />
-            <div className="text-[#637369] dark:text-[#8FA398]">
-              <strong className="text-[#111814] dark:text-[#F4F7F5]">Zero Server-Side Key Persistence:</strong>{' '}
+          <div className="rounded-lg border border-[#E6E8EE] bg-[#F2F4F7] p-3.5 text-xs flex items-start gap-2.5">
+            <ShieldCheck className="w-4 h-4 text-[#047857] shrink-0 mt-0.5" />
+            <div className="text-[#64748B]">
+              <strong className="text-[#0A0D14]">Zero Server-Side Key Persistence:</strong>{' '}
               Provider metadata is stored in SQLite, while your API keys stay exclusively in browser <code className="font-mono">sessionStorage</code> or passphrase-derived AES-GCM 256-bit Web Crypto storage. Keys are never logged or committed.
             </div>
           </div>
 
           <form
             onSubmit={handleSaveAIProfile}
-            className="rounded-xl border border-[#E5EAE7] dark:border-[#213028] bg-[#FFFFFF] dark:bg-[#131C17] p-4 space-y-3 text-xs"
+            className="rounded-xl border border-[#E6E8EE] bg-[#FFFFFF] p-4 space-y-3 text-xs"
           >
             <div className="font-semibold flex items-center gap-1.5">
-              <KeyRound className="w-4 h-4 text-[#15803D] dark:text-[#4ADE80]" />
+              <KeyRound className="w-4 h-4 text-[#047857]" />
               Add or Update BYOK AI Provider
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
               <label className="space-y-1">
-                <span className="text-[11px] text-[#637369] dark:text-[#8FA398]">Provider Type</span>
+                <span className="text-[11px] text-[#64748B]">Provider Type</span>
                 <select
                   value={aiType}
                   onChange={(e) => {
@@ -724,7 +658,7 @@ export const SettingsView: React.FC = () => {
                     setAiBaseUrl(PROVIDER_DEFAULTS[next].baseUrl);
                     setAiModel(PROVIDER_DEFAULTS[next].model);
                   }}
-                  className="w-full px-2.5 py-2 rounded-lg border border-[#E5EAE7] dark:border-[#213028] bg-[#F3F6F4] dark:bg-[#19241E]"
+                  className="w-full px-2.5 py-2 rounded-lg border border-[#E6E8EE] bg-[#F2F4F7]"
                 >
                   {Object.entries(PROVIDER_DEFAULTS).map(([k, v]) => (
                     <option key={k} value={k}>
@@ -735,43 +669,43 @@ export const SettingsView: React.FC = () => {
               </label>
 
               <label className="space-y-1">
-                <span className="text-[11px] text-[#637369] dark:text-[#8FA398]">Profile Label</span>
+                <span className="text-[11px] text-[#64748B]">Profile Label</span>
                 <input
                   type="text"
                   value={aiName}
                   onChange={(e) => setAiName(e.target.value)}
-                  className="w-full px-2.5 py-2 rounded-lg border border-[#E5EAE7] dark:border-[#213028] bg-[#F3F6F4] dark:bg-[#19241E]"
+                  className="w-full px-2.5 py-2 rounded-lg border border-[#E6E8EE] bg-[#F2F4F7]"
                 />
               </label>
 
               <label className="space-y-1">
-                <span className="text-[11px] text-[#637369] dark:text-[#8FA398]">Model Identifier</span>
+                <span className="text-[11px] text-[#64748B]">Model Identifier</span>
                 <input
                   type="text"
                   value={aiModel}
                   onChange={(e) => setAiModel(e.target.value)}
-                  className="w-full px-2.5 py-2 rounded-lg border border-[#E5EAE7] dark:border-[#213028] bg-[#F3F6F4] dark:bg-[#19241E] font-mono"
+                  className="w-full px-2.5 py-2 rounded-lg border border-[#E6E8EE] bg-[#F2F4F7] font-mono"
                 />
               </label>
 
               <label className="space-y-1 md:col-span-2">
-                <span className="text-[11px] text-[#637369] dark:text-[#8FA398]">Base URL</span>
+                <span className="text-[11px] text-[#64748B]">Base URL</span>
                 <input
                   type="url"
                   value={aiBaseUrl}
                   onChange={(e) => setAiBaseUrl(e.target.value)}
-                  className="w-full px-2.5 py-2 rounded-lg border border-[#E5EAE7] dark:border-[#213028] bg-[#F3F6F4] dark:bg-[#19241E] font-mono"
+                  className="w-full px-2.5 py-2 rounded-lg border border-[#E6E8EE] bg-[#F2F4F7] font-mono"
                 />
               </label>
 
               <label className="space-y-1">
-                <span className="text-[11px] text-[#637369] dark:text-[#8FA398]">
+                <span className="text-[11px] text-[#64748B]">
                   Key Storage Mode
                 </span>
                 <select
                   value={aiStorageMode}
                   onChange={(e) => setAiStorageMode(e.target.value as 'session' | 'encrypted_local')}
-                  className="w-full px-2.5 py-2 rounded-lg border border-[#E5EAE7] dark:border-[#213028] bg-[#F3F6F4] dark:bg-[#19241E]"
+                  className="w-full px-2.5 py-2 rounded-lg border border-[#E6E8EE] bg-[#F2F4F7]"
                 >
                   <option value="session">Session-Only (Memory / SessionStorage)</option>
                   <option value="encrypted_local">AES-GCM Passphrase Encrypted Local Vault</option>
@@ -780,20 +714,20 @@ export const SettingsView: React.FC = () => {
 
               {aiType !== 'ollama' && (
                 <label className="space-y-1 md:col-span-2">
-                  <span className="text-[11px] text-[#637369] dark:text-[#8FA398]">API Key</span>
+                  <span className="text-[11px] text-[#64748B]">API Key</span>
                   <input
                     type="password"
                     value={aiKey}
                     onChange={(e) => setAiKey(e.target.value)}
                     placeholder="sk-... or provider key"
-                    className="w-full px-2.5 py-2 rounded-lg border border-[#E5EAE7] dark:border-[#213028] bg-[#F3F6F4] dark:bg-[#19241E] font-mono"
+                    className="w-full px-2.5 py-2 rounded-lg border border-[#E6E8EE] bg-[#F2F4F7] font-mono"
                   />
                 </label>
               )}
 
               {aiType !== 'ollama' && aiStorageMode === 'encrypted_local' && (
                 <label className="space-y-1">
-                  <span className="text-[11px] text-[#637369] dark:text-[#8FA398]">
+                  <span className="text-[11px] text-[#64748B]">
                     Vault Passphrase (min 6 chars)
                   </span>
                   <input
@@ -801,7 +735,7 @@ export const SettingsView: React.FC = () => {
                     value={aiPassphrase}
                     onChange={(e) => setAiPassphrase(e.target.value)}
                     placeholder="Passphrase to encrypt key"
-                    className="w-full px-2.5 py-2 rounded-lg border border-[#E5EAE7] dark:border-[#213028] bg-[#F3F6F4] dark:bg-[#19241E]"
+                    className="w-full px-2.5 py-2 rounded-lg border border-[#E6E8EE] bg-[#F2F4F7]"
                   />
                 </label>
               )}
@@ -818,26 +752,26 @@ export const SettingsView: React.FC = () => {
                 type="button"
                 onClick={handleTestAI}
                 disabled={testingAi}
-                className="px-3.5 py-2 rounded-lg border border-[#E5EAE7] dark:border-[#213028] font-medium"
+                className="px-3.5 py-2 rounded-lg border border-[#E6E8EE] font-medium"
               >
                 {testingAi ? 'Testing...' : 'Test Connection'}
               </button>
-              {aiStatusMsg && <span className="text-[#15803D] dark:text-[#4ADE80]">{aiStatusMsg}</span>}
-              {aiErrorMsg && <span className="text-[#BE123C] dark:text-[#FB7185]">{aiErrorMsg}</span>}
+              {aiStatusMsg && <span className="text-[#047857]">{aiStatusMsg}</span>}
+              {aiErrorMsg && <span className="text-[#BE123C]">{aiErrorMsg}</span>}
             </div>
           </form>
 
           {/* Saved Profiles */}
-          <div className="rounded-xl border border-[#E5EAE7] dark:border-[#213028] bg-[#FFFFFF] dark:bg-[#131C17] overflow-hidden text-xs">
-            <div className="px-4 py-2.5 border-b border-[#E5EAE7] dark:border-[#213028] font-semibold">
+          <div className="rounded-xl border border-[#E6E8EE] bg-[#FFFFFF] overflow-hidden text-xs">
+            <div className="px-4 py-2.5 border-b border-[#E6E8EE] font-semibold">
               Configured AI Profiles ({aiProfiles.length})
             </div>
             {aiProfiles.length === 0 ? (
-              <div className="p-5 text-center text-[#637369] dark:text-[#8FA398]">
+              <div className="p-5 text-center text-[#64748B]">
                 No AI provider profiles configured. AI Research Assistant remains cleanly disabled.
               </div>
             ) : (
-              <div className="divide-y divide-[#E8DDD1] dark:divide-[#22C55E]/14">
+              <div className="divide-y divide-[#ECEFF4]">
                 {aiProfiles.map((p) => {
                   const unlocked = Boolean(getSessionApiKey(p.id));
                   const encrypted = hasEncryptedApiKey(p.id);
@@ -846,11 +780,11 @@ export const SettingsView: React.FC = () => {
                       <div>
                         <div className="font-semibold">
                           {p.name}{' '}
-                          <span className="font-mono text-[11px] font-normal text-[#637369] dark:text-[#8FA398]">
+                          <span className="font-mono text-[11px] font-normal text-[#64748B]">
                             ({p.providerType} · {p.model})
                           </span>
                         </div>
-                        <div className="text-[11px] text-[#637369] dark:text-[#8FA398]">
+                        <div className="text-[11px] text-[#64748B]">
                           {p.baseUrl} ·{' '}
                           {p.providerType === 'ollama'
                             ? 'Local Endpoint'
@@ -865,7 +799,7 @@ export const SettingsView: React.FC = () => {
                         type="button"
                         aria-label={`Delete AI profile ${p.name}`}
                         onClick={() => handleDeleteAIProfile(p.id)}
-                        className="p-1.5 text-[#637369] hover:text-[#BE123C]"
+                        className="p-1.5 text-[#64748B] hover:text-[#BE123C]"
                       >
                         <Trash2 className="w-4 h-4" />
                       </button>
@@ -880,25 +814,25 @@ export const SettingsView: React.FC = () => {
 
       {/* DATA MANAGEMENT TAB */}
       {tab === 'data' && (
-        <div className="rounded-xl border border-[#E5EAE7] dark:border-[#213028] bg-[#FFFFFF] dark:bg-[#131C17] p-5 space-y-4 text-xs">
+        <div className="rounded-xl border border-[#E6E8EE] bg-[#FFFFFF] p-5 space-y-4 text-xs">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div className="rounded-lg border border-[#E5EAE7] dark:border-[#213028] bg-[#F3F6F4] dark:bg-[#19241E] p-4 space-y-2.5">
+            <div className="rounded-lg border border-[#E6E8EE] bg-[#F2F4F7] p-4 space-y-2.5">
               <div className="font-semibold flex items-center gap-1.5">
-                <Download className="w-4 h-4 text-[#15803D] dark:text-[#4ADE80]" />
+                <Download className="w-4 h-4 text-[#047857]" />
                 Export & Import Settings
               </div>
-              <p className="text-[11px] text-[#637369] dark:text-[#8FA398]">
+              <p className="text-[11px] text-[#64748B]">
                 Export your SIGLENS weights, thresholds, and display preferences as JSON, or export persisted signal history to CSV.
               </p>
               <div className="flex flex-wrap gap-2 pt-1">
                 <button
                   type="button"
                   onClick={handleExportSettings}
-                  className="px-3 py-1.5 rounded-lg border border-[#E5EAE7] dark:border-[#213028] bg-[#FFFFFF] dark:bg-[#131C17] font-medium"
+                  className="px-3 py-1.5 rounded-lg border border-[#E6E8EE] bg-[#FFFFFF] font-medium"
                 >
                   Export Settings JSON
                 </button>
-                <label className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-[#E5EAE7] dark:border-[#213028] bg-[#FFFFFF] dark:bg-[#131C17] font-medium cursor-pointer">
+                <label className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-[#E6E8EE] bg-[#FFFFFF] font-medium cursor-pointer">
                   <Upload className="w-3.5 h-3.5" />
                   Import JSON
                   <input type="file" accept="application/json" onChange={handleImportSettings} className="hidden" />
@@ -906,33 +840,33 @@ export const SettingsView: React.FC = () => {
                 <button
                   type="button"
                   onClick={handleExportSignalCsv}
-                  className="px-3 py-1.5 rounded-lg border border-[#E5EAE7] dark:border-[#213028] bg-[#FFFFFF] dark:bg-[#131C17] font-medium"
+                  className="px-3 py-1.5 rounded-lg border border-[#E6E8EE] bg-[#FFFFFF] font-medium"
                 >
                   Export Signal History CSV
                 </button>
               </div>
             </div>
 
-            <div className="rounded-lg border border-[#E5EAE7] dark:border-[#213028] bg-[#F3F6F4] dark:bg-[#19241E] p-4 space-y-2.5">
+            <div className="rounded-lg border border-[#E6E8EE] bg-[#F2F4F7] p-4 space-y-2.5">
               <div className="font-semibold flex items-center gap-1.5">
                 <Database className="w-4 h-4 text-[#E6A832]" />
                 Cache & Reset Controls
               </div>
-              <p className="text-[11px] text-[#637369] dark:text-[#8FA398]">
+              <p className="text-[11px] text-[#64748B]">
                 Clear cached historical OHLCV candles from local SQLite or restore factory default indicator weights and preferences.
               </p>
               <div className="flex flex-wrap gap-2 pt-1">
                 <button
                   type="button"
                   onClick={handleClearCache}
-                  className="px-3 py-1.5 rounded-lg border border-[#E5EAE7] dark:border-[#213028] bg-[#FFFFFF] dark:bg-[#131C17] font-medium"
+                  className="px-3 py-1.5 rounded-lg border border-[#E6E8EE] bg-[#FFFFFF] font-medium"
                 >
                   Clear SQLite Candle Cache
                 </button>
                 <button
                   type="button"
                   onClick={() => handleSavePref({ ...DEFAULT_PREFERENCES }, 'Restored default preferences')}
-                  className="px-3 py-1.5 rounded-lg border border-[#FB7185]/40 text-[#BE123C] dark:text-[#FB7185] font-medium"
+                  className="px-3 py-1.5 rounded-lg border border-[#FB7185]/40 text-[#BE123C] font-medium"
                 >
                   Reset Default Settings
                 </button>

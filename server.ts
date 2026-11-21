@@ -4,7 +4,9 @@ import express from 'express';
 import { z } from 'zod';
 import { createServer as createViteServer } from 'vite';
 import {
+  ALL_EXCHANGES,
   BUILT_IN_SCREENER_PRESETS,
+  defaultMarketTypeFor,
   EXCHANGE_MARKET_TYPES,
   EXCHANGE_TIMEFRAMES,
   MTF_TIMEFRAMES,
@@ -56,13 +58,26 @@ import {
   parseCanonicalId,
 } from './src/server/providers';
 import { runScreenerScan, startBackgroundScanner } from './src/server/scanner';
+import {
+  buildPaperArenaSnapshot,
+  closePaperPosition,
+  createPaperBot,
+  deletePaperBot,
+  emergencyStopAndFlatten,
+  openPaperOrder,
+  resetPaperAccount,
+  runAutonomousPaperCycle,
+  startAutonomousPaperLoop,
+  updatePaperAccountConfig,
+  updatePaperBot,
+} from './src/server/paperEngine';
 import { wsHub } from './src/server/wsHub';
 
 const PORT = Number(process.env.PORT || 3000);
 const IS_PROD = process.env.NODE_ENV === 'production';
 
-const exchangeSchema = z.enum(['binance', 'bybit', 'kraken', 'coinbase']);
-const marketTypeSchema = z.enum(['spot', 'perpetual']);
+const exchangeSchema = z.enum(['binance', 'bybit', 'kraken', 'coinbase', 'stocks', 'cfds']);
+const marketTypeSchema = z.enum(['spot', 'perpetual', 'equity', 'cfd']);
 const timeframeSchema = z.enum(['1m', '3m', '5m', '15m', '30m', '1h', '2h', '4h', '6h', '12h', '1d', '1w']);
 
 function buildApiRouter(): express.Router {
@@ -97,7 +112,7 @@ function buildApiRouter(): express.Router {
 
   router.get('/providers', (_req, res) => {
     res.json({
-      exchanges: (['binance', 'bybit', 'kraken', 'coinbase'] as ExchangeId[]).map((id) => ({
+      exchanges: ALL_EXCHANGES.map((id) => ({
         id,
         marketTypes: EXCHANGE_MARKET_TYPES[id],
         timeframes: EXCHANGE_TIMEFRAMES[id],
@@ -152,7 +167,8 @@ function buildApiRouter(): express.Router {
               t.displaySymbol.includes(q) ||
               t.baseAsset.includes(q) ||
               t.exchange.toUpperCase().includes(q) ||
-              t.canonicalId.toUpperCase().includes(q),
+              t.canonicalId.toUpperCase().includes(q) ||
+              t.source.toUpperCase().includes(q),
           )
         : tickers.slice(0, 30);
       res.json({ results: filtered.slice(0, 40) });
@@ -527,11 +543,11 @@ function buildApiRouter(): express.Router {
     try {
       const exchange = (req.query.exchange as ExchangeId) || 'binance';
       const timeframe = (req.query.timeframe as Timeframe) || '1h';
-      const scan = await runScreenerScan(exchange, 'spot', timeframe, false);
+      const scan = await runScreenerScan(exchange, defaultMarketTypeFor(exchange), timeframe, false);
       const breadth = computeMarketBreadth(scan.rows);
       res.json({
         ...breadth,
-        universeNote: `Calculated across top ${scan.rows.length} liquid USDT pairs on ${exchange} (${timeframe}).`,
+        universeNote: `Calculated across top ${scan.rows.length} liquid instruments on ${exchange} (${timeframe}).`,
         scannedAt: scan.scannedAt,
         rows: scan.rows,
       });
@@ -543,21 +559,26 @@ function buildApiRouter(): express.Router {
   router.get('/market-overview', async (req, res) => {
     try {
       const exchange = (req.query.exchange as ExchangeId) || 'binance';
-      const marketType = (req.query.marketType as MarketType) || 'spot';
+      const marketType = (req.query.marketType as MarketType) || defaultMarketTypeFor(exchange);
       const [tickers, fng, scan] = await Promise.all([
         getMarketTickers(exchange, marketType),
         fetchFearAndGreed(),
         runScreenerScan(exchange, marketType, '1h', false),
       ]);
 
-      const usdtTickers = tickers.filter((t) => t.quoteAsset === 'USDT' || t.quoteAsset === 'USD');
+      const usdtTickers =
+        exchange === 'stocks' || exchange === 'cfds'
+          ? tickers
+          : tickers.filter((t) => t.quoteAsset === 'USDT' || t.quoteAsset === 'USD');
       const totalVol = usdtTickers.reduce((s, t) => s + t.quoteVolume24h, 0);
-      const btcTicker = usdtTickers.find((t) => t.baseAsset === 'BTC');
-      const ethTicker = usdtTickers.find((t) => t.baseAsset === 'ETH');
+      const primaryBase = exchange === 'stocks' ? 'NVDA' : exchange === 'cfds' ? 'US500' : 'BTC';
+      const secondaryBase = exchange === 'stocks' ? 'AAPL' : exchange === 'cfds' ? 'XAU' : 'ETH';
+      const btcTicker = usdtTickers.find((t) => t.baseAsset === primaryBase) ?? usdtTickers[0];
+      const ethTicker = usdtTickers.find((t) => t.baseAsset === secondaryBase) ?? usdtTickers[1];
 
       const breadth = computeMarketBreadth(scan.rows);
-      const btcRow = scan.rows.find((r) => r.baseAsset === 'BTC');
-      const ethRow = scan.rows.find((r) => r.baseAsset === 'ETH');
+      const btcRow = scan.rows.find((r) => r.baseAsset === primaryBase) ?? scan.rows[0];
+      const ethRow = scan.rows.find((r) => r.baseAsset === secondaryBase) ?? scan.rows[1];
 
       const avgRvol =
         scan.rows.length > 0
@@ -569,7 +590,12 @@ function buildApiRouter(): express.Router {
           : 1;
 
       // Leader sparklines from real 1h candles (last 24 bars)
-      const leaderBases = ['BTC', 'ETH', 'SOL', 'XRP', 'BNB', 'DOGE'];
+      const leaderBases =
+        exchange === 'stocks'
+          ? ['AAPL', 'NVDA', 'MSFT', 'TSLA', 'AMZN', 'META']
+          : exchange === 'cfds'
+            ? ['US500', 'NAS100', 'XAU', 'WTI', 'EUR', 'GBP']
+            : ['BTC', 'ETH', 'SOL', 'XRP', 'BNB', 'DOGE'];
       const leaders = (
         await Promise.all(
           leaderBases.map(async (base) => {
@@ -657,7 +683,7 @@ function buildApiRouter(): express.Router {
 
       const fetched = await Promise.all(
         symbols.map(async (symbol) => {
-          const c = await fetchCandles(exchange, 'spot', symbol, timeframe, lookback + 20);
+          const c = await fetchCandles(exchange, defaultMarketTypeFor(exchange), symbol, timeframe, lookback + 20);
           return { symbol, candles: c.candles };
         }),
       );
@@ -1015,6 +1041,147 @@ function buildApiRouter(): express.Router {
     }
   });
 
+  // --- Autonomous Paper-Trading Bot & Strategy Arena ---
+  router.get('/paper/state', async (req, res) => {
+    try {
+      const refresh = req.query.refresh !== 'false';
+      const snapshot = await buildPaperArenaSnapshot(refresh);
+      res.json(snapshot);
+    } catch (err) {
+      res.status(500).json({ error: err instanceof Error ? err.message : 'Failed to load paper arena state' });
+    }
+  });
+
+  router.put('/paper/account', rateLimit(30), (req, res) => {
+    const schema = z.object({
+      maxRiskPerTradePct: z.number().min(0.25).max(10).optional(),
+      maxOpenPositions: z.number().int().min(1).max(20).optional(),
+      maxDailyDrawdownPct: z.number().min(1).max(50).optional(),
+      defaultLeverage: z.number().min(1).max(10).optional(),
+      feeBps: z.number().min(0).max(50).optional(),
+      slippageBps: z.number().min(0).max(50).optional(),
+      killSwitchTriggered: z.boolean().optional(),
+    });
+    const parsed = schema.safeParse(req.body);
+    if (!parsed.success) return res.status(400).json({ error: 'Invalid account config' });
+    const account = updatePaperAccountConfig(parsed.data);
+    res.json({ account });
+  });
+
+  router.post('/paper/bots', rateLimit(30), (req, res) => {
+    const schema = z.object({
+      name: z.string().min(2).max(60),
+      description: z.string().max(240).optional(),
+      exchange: exchangeSchema,
+      marketType: marketTypeSchema.optional(),
+      timeframe: timeframeSchema,
+      enabled: z.boolean().optional(),
+      directionMode: z.enum(['BOTH', 'LONG_ONLY', 'SHORT_ONLY']).optional(),
+      minScore: z.number().min(20).max(90).optional(),
+      minAgreementPct: z.number().min(40).max(95).optional(),
+      riskPerTradePct: z.number().min(0.25).max(10).optional(),
+      leverage: z.number().min(1).max(10).optional(),
+      trailingStopAtrMult: z.number().min(0.5).max(5).nullable().optional(),
+      partialTp1Pct: z.number().min(0).max(80).optional(),
+      cooldownMinutes: z.number().int().min(5).max(1440).optional(),
+    });
+    const parsed = schema.safeParse(req.body);
+    if (!parsed.success) return res.status(400).json({ error: 'Invalid strategy bot payload' });
+    const bot = createPaperBot(parsed.data);
+    res.status(201).json({ bot });
+  });
+
+  router.patch('/paper/bots/:id', rateLimit(40), (req, res) => {
+    const schema = z.object({
+      name: z.string().min(2).max(60).optional(),
+      enabled: z.boolean().optional(),
+      directionMode: z.enum(['BOTH', 'LONG_ONLY', 'SHORT_ONLY']).optional(),
+      minScore: z.number().min(20).max(90).optional(),
+      minAgreementPct: z.number().min(40).max(95).optional(),
+      riskPerTradePct: z.number().min(0.25).max(10).optional(),
+      leverage: z.number().min(1).max(10).optional(),
+      trailingStopAtrMult: z.number().min(0.5).max(5).nullable().optional(),
+      partialTp1Pct: z.number().min(0).max(80).optional(),
+      cooldownMinutes: z.number().int().min(5).max(1440).optional(),
+    });
+    const parsed = schema.safeParse(req.body);
+    if (!parsed.success) return res.status(400).json({ error: 'Invalid bot update payload' });
+    const bot = updatePaperBot(req.params.id, parsed.data);
+    if (!bot) return res.status(404).json({ error: 'Bot not found' });
+    res.json({ bot });
+  });
+
+  router.delete('/paper/bots/:id', rateLimit(30), (req, res) => {
+    deletePaperBot(req.params.id);
+    res.json({ ok: true });
+  });
+
+  router.post('/paper/tick', rateLimit(20), async (_req, res) => {
+    try {
+      const result = await runAutonomousPaperCycle(true);
+      const snapshot = await buildPaperArenaSnapshot(false);
+      res.json({ result, snapshot });
+    } catch (err) {
+      res.status(500).json({ error: err instanceof Error ? err.message : 'Autonomous cycle failed' });
+    }
+  });
+
+  router.post('/paper/order', rateLimit(40), async (req, res) => {
+    const schema = z.object({
+      exchange: exchangeSchema,
+      marketType: marketTypeSchema.optional(),
+      symbol: z.string().min(3).max(24),
+      timeframe: timeframeSchema.optional(),
+      side: z.enum(['LONG', 'SHORT']),
+      riskPct: z.number().min(0.25).max(10).optional(),
+      notionalUsd: z.number().min(25).max(1_000_000).optional(),
+      leverage: z.number().min(1).max(10).optional(),
+      stopLoss: z.number().positive().nullable().optional(),
+      tp1: z.number().positive().nullable().optional(),
+      tp2: z.number().positive().nullable().optional(),
+      tp3: z.number().positive().nullable().optional(),
+      entryReason: z.string().max(240).optional(),
+    });
+    const parsed = schema.safeParse(req.body);
+    if (!parsed.success) return res.status(400).json({ error: 'Invalid paper order payload' });
+    try {
+      const position = await openPaperOrder(parsed.data);
+      const snapshot = await buildPaperArenaSnapshot(false);
+      res.status(201).json({ position, snapshot });
+    } catch (err) {
+      res.status(400).json({ error: err instanceof Error ? err.message : 'Failed to open paper order' });
+    }
+  });
+
+  router.post('/paper/positions/:id/close', rateLimit(40), async (req, res) => {
+    try {
+      const position = await closePaperPosition(req.params.id, 'MANUAL_CLOSE');
+      const snapshot = await buildPaperArenaSnapshot(false);
+      res.json({ position, snapshot });
+    } catch (err) {
+      res.status(400).json({ error: err instanceof Error ? err.message : 'Failed to close position' });
+    }
+  });
+
+  router.post('/paper/emergency-stop', rateLimit(15), async (_req, res) => {
+    try {
+      const summary = await emergencyStopAndFlatten();
+      const snapshot = await buildPaperArenaSnapshot(false);
+      res.json({ summary, snapshot });
+    } catch (err) {
+      res.status(500).json({ error: err instanceof Error ? err.message : 'Emergency stop failed' });
+    }
+  });
+
+  router.post('/paper/reset', rateLimit(10), async (req, res) => {
+    const schema = z.object({ startingBalanceUsd: z.number().min(100).max(10_000_000).default(10000) });
+    const parsed = schema.safeParse(req.body ?? {});
+    const bal = parsed.success ? parsed.data.startingBalanceUsd : 10000;
+    resetPaperAccount(bal);
+    const snapshot = await buildPaperArenaSnapshot(false);
+    res.json({ snapshot });
+  });
+
   return router;
 }
 
@@ -1046,6 +1213,7 @@ async function bootstrap() {
   server.listen(PORT, '0.0.0.0', () => {
     console.log(`[CRYPTOLENS] Server listening on http://0.0.0.0:${PORT}`);
     startBackgroundScanner();
+    startAutonomousPaperLoop();
   });
 }
 

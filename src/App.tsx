@@ -1,6 +1,8 @@
 import React, { Suspense, lazy, useEffect } from 'react';
+import { AnimatePresence, MotionConfig, motion } from 'motion/react';
 import { AppShell } from './components/layout/AppShell';
 import { CommandSearchModal } from './components/layout/CommandSearchModal';
+import { KINETIC_EASE } from './components/ui/Kinetic';
 import { SkeletonBlock } from './components/ui/SignalMeter';
 import { useMarketStream } from './hooks/useMarketStream';
 import { useAppStore } from './store/useAppStore';
@@ -10,6 +12,7 @@ import { MarketsView } from './views/MarketsView';
 import { LiveSignalsView } from './views/LiveSignalsView';
 import { ScreenerView } from './views/ScreenerView';
 import { AIResearchView } from './views/AIResearchView';
+import { PaperArenaView } from './views/PaperArenaView';
 import { SettingsView } from './views/SettingsView';
 
 const HeatmapsView = lazy(() =>
@@ -38,15 +41,15 @@ class ViewErrorBoundary extends React.Component<
   render() {
     if (this.state.hasError) {
       return (
-        <div className="rounded-xl border border-[#F16B72]/40 bg-[#F16B72]/10 p-6 text-xs space-y-2">
-          <div className="font-bold text-sm text-[#DC4C54] dark:text-[#F16B72]">
+        <div className="rounded-2xl border border-[#FECDD3] bg-[#FFF1F2] p-6 text-xs space-y-2">
+          <div className="font-bold text-sm text-[#BE123C]">
             Workspace View Encountered an Error
           </div>
-          <p className="text-[#756253] dark:text-[#C5B1A0]">{this.state.message}</p>
+          <p className="text-[#525E70]">{this.state.message}</p>
           <button
             type="button"
             onClick={() => this.setState({ hasError: false, message: '' })}
-            className="px-3 py-1.5 rounded-lg bg-[#2563EB] dark:bg-[#4EA1FF] text-white dark:text-[#0B0F14] font-semibold"
+            className="px-3.5 py-1.5 rounded-full sig-btn-primary font-semibold"
           >
             Retry View
           </button>
@@ -99,6 +102,8 @@ export function App() {
         return <ScreenerView />;
       case 'heatmaps':
         return <HeatmapsView />;
+      case 'arena':
+        return <PaperArenaView />;
       case 'ai':
         return <AIResearchView />;
       case 'settings':
@@ -109,12 +114,26 @@ export function App() {
   };
 
   return (
-    <AppShell>
-      <ViewErrorBoundary resetKey={activeSection}>
-        <Suspense fallback={<ViewSuspenseFallback />}>{renderSection()}</Suspense>
-      </ViewErrorBoundary>
-      <CommandSearchModal />
-    </AppShell>
+    <MotionConfig reducedMotion="user">
+      <AppShell>
+        <ViewErrorBoundary resetKey={activeSection}>
+          <Suspense fallback={<ViewSuspenseFallback />}>
+            <AnimatePresence mode="wait">
+              <motion.div
+                key={activeSection}
+                initial={{ opacity: 0, y: 8 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, y: -6 }}
+                transition={{ duration: 0.22, ease: KINETIC_EASE }}
+              >
+                {renderSection()}
+              </motion.div>
+            </AnimatePresence>
+          </Suspense>
+        </ViewErrorBoundary>
+        <CommandSearchModal />
+      </AppShell>
+    </MotionConfig>
   );
 }
 

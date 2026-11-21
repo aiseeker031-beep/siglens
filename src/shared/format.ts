@@ -94,34 +94,34 @@ export function signalLabel(c: SignalClassification): string {
 export function signalColorClass(c: SignalClassification): string {
   switch (c) {
     case 'STRONG_BULLISH':
-      return 'text-[#15803D] dark:text-[#4ADE80]';
+      return 'text-[#047857]';
     case 'BULLISH':
-      return 'text-[#16A34A] dark:text-[#22C55E]';
+      return 'text-[#059669]';
     case 'NEUTRAL':
-      return 'text-[#64746B] dark:text-[#8FA398]';
+      return 'text-[#525E70]';
     case 'BEARISH':
-      return 'text-[#E11D48] dark:text-[#FB7185]';
+      return 'text-[#E11D48]';
     case 'STRONG_BEARISH':
-      return 'text-[#BE123C] dark:text-[#FB7185]';
+      return 'text-[#BE123C]';
     case 'INSUFFICIENT_DATA':
-      return 'text-[#64746B] dark:text-[#8FA398]';
+      return 'text-[#64748B]';
   }
 }
 
 export function signalBgClass(c: SignalClassification): string {
   switch (c) {
     case 'STRONG_BULLISH':
-      return 'bg-[#DCFCE7] dark:bg-[#22C55E]/18 text-[#15803D] dark:text-[#4ADE80] border border-[#BBF7D0] dark:border-[#22C55E]/30';
+      return 'bg-[#ECFDF5] text-[#047857] border border-[#A7F3D0]';
     case 'BULLISH':
-      return 'bg-[#ECFDF5] dark:bg-[#22C55E]/12 text-[#16A34A] dark:text-[#22C55E] border border-[#D1FAE5] dark:border-[#22C55E]/22';
+      return 'bg-[#F0FDF4] text-[#059669] border border-[#BBF7D0]';
     case 'NEUTRAL':
-      return 'bg-[#FEF3C7] dark:bg-[#F59E0B]/14 text-[#92400E] dark:text-[#FBBF24] border border-[#FDE68A] dark:border-[#F59E0B]/25';
+      return 'bg-[#FFFBEB] text-[#B45309] border border-[#FDE68A]';
     case 'BEARISH':
-      return 'bg-[#FFE4E6] dark:bg-[#F43F5E]/14 text-[#BE123C] dark:text-[#FB7185] border border-[#FECDD3] dark:border-[#F43F5E]/25';
+      return 'bg-[#FFF1F2] text-[#BE123C] border border-[#FECDD3]';
     case 'STRONG_BEARISH':
-      return 'bg-[#FFE4E6] dark:bg-[#F43F5E]/18 text-[#9F1239] dark:text-[#FDA4AF] border border-[#FDA4AF] dark:border-[#F43F5E]/35';
+      return 'bg-[#FFE4E6] text-[#9F1239] border border-[#FDA4AF]';
     case 'INSUFFICIENT_DATA':
-      return 'bg-[#F1F5F3] dark:bg-[#213028] text-[#64746B] dark:text-[#8FA398] border border-[#E2E8E4] dark:border-[#2C3E34]';
+      return 'bg-[#F1F5F9] text-[#475569] border border-[#E2E8F0]';
   }
 }
 

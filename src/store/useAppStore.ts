@@ -52,19 +52,18 @@ interface AppState {
   toggleWatchlist: (canonicalId: string) => Promise<void>;
   reorderWatchlist: (items: string[]) => Promise<void>;
   applyLiveTicker: (patch: Omit<LiveTickerPatch, 'prevPrice'>) => void;
+  applyLiveTickerBatch: (patches: Omit<LiveTickerPatch, 'prevPrice'>[]) => void;
   applyLiveCandle: (canonicalId: string, timeframe: Timeframe, candle: Candle) => void;
   setWsFreshness: (freshness: DataFreshness, ts?: number) => void;
   pushNotification: (ev: AlertEventRecord) => void;
   clearNotifications: () => void;
 }
 
-export function applyThemeToDom(theme: UserPreferences['theme']): void {
+export function applyThemeToDom(_theme?: UserPreferences['theme']): void {
   if (typeof document === 'undefined') return;
   const root = document.documentElement;
-  const prefersDark =
-    typeof window !== 'undefined' && window.matchMedia('(prefers-color-scheme: dark)').matches;
-  const isDark = theme === 'dark' || (theme === 'system' && prefersDark);
-  root.classList.toggle('dark', isDark);
+  root.classList.remove('dark');
+  root.style.colorScheme = 'light';
 }
 
 export const useAppStore = create<AppState>((set, get) => ({
@@ -73,7 +72,7 @@ export const useAppStore = create<AppState>((set, get) => ({
   marketType: 'spot',
   symbol: 'BTC/USDT',
   timeframe: '15m',
-  preferences: { ...DEFAULT_PREFERENCES },
+  preferences: { ...DEFAULT_PREFERENCES, theme: 'light' },
   watchlist: [...DEFAULT_WATCHLIST_MARKETS],
   wsFreshness: 'RECONNECTING',
   lastStreamTs: null,
@@ -107,13 +106,21 @@ export const useAppStore = create<AppState>((set, get) => ({
     const nextType = supportedTypes.includes(get().marketType) ? get().marketType : supportedTypes[0];
     const supportedTfs = EXCHANGE_TIMEFRAMES[exchange];
     const nextTf = supportedTfs.includes(get().timeframe) ? get().timeframe : '1h';
-    // Adjust quote currency for USD-only exchanges (Kraken/Coinbase) cleanly
+    const prevExchange = get().exchange;
     const [base, quote] = get().symbol.split('/');
     let nextSym = get().symbol;
-    if ((exchange === 'kraken' || exchange === 'coinbase') && quote === 'USDT') {
-      nextSym = `${base}/USD`;
-    } else if ((exchange === 'binance' || exchange === 'bybit') && quote === 'USD') {
-      nextSym = `${base}/USDT`;
+    if (exchange === 'stocks') {
+      nextSym = prevExchange === 'stocks' ? get().symbol : 'AAPL/USD';
+    } else if (exchange === 'cfds') {
+      nextSym = prevExchange === 'cfds' ? get().symbol : 'US500/USD';
+    } else {
+      if (prevExchange === 'stocks' || prevExchange === 'cfds') {
+        nextSym = exchange === 'kraken' || exchange === 'coinbase' ? 'BTC/USD' : 'BTC/USDT';
+      } else if ((exchange === 'kraken' || exchange === 'coinbase') && quote === 'USDT') {
+        nextSym = `${base}/USD`;
+      } else if ((exchange === 'binance' || exchange === 'bybit') && quote === 'USD') {
+        nextSym = `${base}/USDT`;
+      }
     }
     set({ exchange, marketType: nextType, timeframe: nextTf, symbol: nextSym });
   },
@@ -139,8 +146,11 @@ export const useAppStore = create<AppState>((set, get) => ({
         api.getWatchlist().catch(() => null),
         api.getAlerts().catch(() => null),
       ]);
-      const prefs = settingsRes?.preferences ?? DEFAULT_PREFERENCES;
-      applyThemeToDom(prefs.theme);
+      const prefs: UserPreferences = {
+        ...(settingsRes?.preferences ?? DEFAULT_PREFERENCES),
+        theme: 'light',
+      };
+      applyThemeToDom('light');
       set({
         preferences: prefs,
         exchange: prefs.defaultExchange || 'binance',
@@ -152,7 +162,7 @@ export const useAppStore = create<AppState>((set, get) => ({
         initialized: true,
       });
     } catch {
-      applyThemeToDom('dark');
+      applyThemeToDom('light');
       set({ initialized: true });
     }
   },
@@ -161,10 +171,11 @@ export const useAppStore = create<AppState>((set, get) => ({
     const merged: UserPreferences = {
       ...get().preferences,
       ...patch,
+      theme: 'light',
       weights: { ...get().preferences.weights, ...(patch.weights ?? {}) },
       thresholds: { ...get().preferences.thresholds, ...(patch.thresholds ?? {}) },
     };
-    applyThemeToDom(merged.theme);
+    applyThemeToDom('light');
     set({ preferences: merged });
     try {
       await api.saveSettings(merged);
@@ -204,6 +215,24 @@ export const useAppStore = create<AppState>((set, get) => ({
           ...state.liveTickers,
           [patch.canonicalId]: { ...patch, prevPrice: prev },
         },
+      };
+    });
+  },
+
+  applyLiveTickerBatch: (patches) => {
+    if (patches.length === 0) return;
+    set((state) => {
+      const next = { ...state.liveTickers };
+      let latestTs = state.lastStreamTs ?? Date.now();
+      for (const patch of patches) {
+        const prev = next[patch.canonicalId]?.lastPrice ?? patch.lastPrice;
+        next[patch.canonicalId] = { ...patch, prevPrice: prev };
+        if (patch.timestamp > latestTs) latestTs = patch.timestamp;
+      }
+      return {
+        lastStreamTs: latestTs,
+        wsFreshness: 'LIVE',
+        liveTickers: next,
       };
     });
   },

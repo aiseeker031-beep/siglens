@@ -1,0 +1,121 @@
+name: Deploy SIGLENS to Hostcry cPanel
+
+on:
+  push:
+    branches:
+      - main
+  workflow_dispatch:
+
+concurrency:
+  group: deploy-siglens-cpanel
+  cancel-in-progress: false
+
+jobs:
+  build-and-deploy:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js 24
+        uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+
+      - name: Install dependencies
+        run: npm install --legacy-peer-deps --no-audit --no-fund
+
+      - name: Build Vite frontend
+        run: npm run build
+
+      - name: Bundle self-contained Node 24 server and stage deploy package
+        run: |
+          node scripts/bundle-server.cjs
+          cd deploy
+          zip -r -q ../siglens-deploy.zip .
+          ls -lh ../siglens-deploy.zip
+
+      - name: Upload, extract, and restart on Hostcry cPanel
+        env:
+          CPANEL_HOST: ${{ secrets.CPANEL_HOST }}
+          CPANEL_USER: ${{ secrets.CPANEL_USER }}
+          CPANEL_PASS: ${{ secrets.CPANEL_PASS }}
+          CPANEL_APP_ROOT: ${{ secrets.CPANEL_APP_ROOT || 'siglens' }}
+          LIVE_HEALTH_URL: ${{ secrets.LIVE_HEALTH_URL || 'https://siglens.cc.cd/api/health' }}
+        run: |
+          set -euo pipefail
+
+          if [ -z "${CPANEL_HOST:-}" ] || [ -z "${CPANEL_USER:-}" ] || [ -z "${CPANEL_PASS:-}" ]; then
+            echo "ERROR: Missing required GitHub Secrets (CPANEL_HOST, CPANEL_USER, CPANEL_PASS)."
+            exit 1
+          fi
+
+          APP_DIR="/home/${CPANEL_USER}/${CPANEL_APP_ROOT}"
+          COOKIE_JAR="$(mktemp)"
+          trap 'rm -f "$COOKIE_JAR"' EXIT
+
+          echo "Authenticating to cPanel..."
+          LOGIN_JSON=$(curl -fsS -k -c "$COOKIE_JAR" -X POST \
+            "https://${CPANEL_HOST}:2083/login/?login_only=1" \
+            --data-urlencode "user=${CPANEL_USER}" \
+            --data-urlencode "pass=${CPANEL_PASS}")
+
+          SEC_TOKEN=$(node -e "const d = JSON.parse(process.argv[1]); if (d.status !== 1 || !d.security_token) process.exit(1); console.log(d.security_token);" "$LOGIN_JSON")
+          BASE_URL="https://${CPANEL_HOST}:2083${SEC_TOKEN}"
+
+          echo "Removing previous dist/ folder..."
+          curl -fsS -k -b "$COOKIE_JAR" -X POST "${BASE_URL}/json-api/cpanel" \
+            --data-urlencode "cpanel_jsonapi_user=${CPANEL_USER}" \
+            --data-urlencode "cpanel_jsonapi_apiversion=2" \
+            --data-urlencode "cpanel_jsonapi_module=Fileman" \
+            --data-urlencode "cpanel_jsonapi_func=fileop" \
+            --data-urlencode "op=unlink" \
+            --data-urlencode "sourcefiles=${APP_DIR}/dist" >/dev/null || true
+
+          echo "Uploading siglens-deploy.zip..."
+          UPLOAD_JSON=$(curl -fsS -k -b "$COOKIE_JAR" -X POST \
+            "${BASE_URL}/execute/Fileman/upload_files" \
+            -F "dir=${APP_DIR}" \
+            -F "overwrite=1" \
+            -F "file-1=@siglens-deploy.zip")
+
+          node -e "const d = JSON.parse(process.argv[1]); if (d.status !== 1 || !d.data?.succeeded) { console.error(d); process.exit(1); }" "$UPLOAD_JSON"
+
+          echo "Extracting bundle into ${APP_DIR}..."
+          EXTRACT_JSON=$(curl -fsS -k -b "$COOKIE_JAR" -X POST "${BASE_URL}/json-api/cpanel" \
+            --data-urlencode "cpanel_jsonapi_user=${CPANEL_USER}" \
+            --data-urlencode "cpanel_jsonapi_apiversion=2" \
+            --data-urlencode "cpanel_jsonapi_module=Fileman" \
+            --data-urlencode "cpanel_jsonapi_func=fileop" \
+            --data-urlencode "op=extract" \
+            --data-urlencode "sourcefiles=${APP_DIR}/siglens-deploy.zip" \
+            --data-urlencode "destfiles=${APP_DIR}")
+
+          node -e "const d = JSON.parse(process.argv[1]); if (d.cpanelresult?.data?.[0]?.result !== 1) { console.error(d); process.exit(1); }" "$EXTRACT_JSON"
+
+          echo "Cleaning up remote archive..."
+          curl -fsS -k -b "$COOKIE_JAR" -X POST "${BASE_URL}/json-api/cpanel" \
+            --data-urlencode "cpanel_jsonapi_user=${CPANEL_USER}" \
+            --data-urlencode "cpanel_jsonapi_apiversion=2" \
+            --data-urlencode "cpanel_jsonapi_module=Fileman" \
+            --data-urlencode "cpanel_jsonapi_func=fileop" \
+            --data-urlencode "op=unlink" \
+            --data-urlencode "sourcefiles=${APP_DIR}/siglens-deploy.zip" >/dev/null
+
+          echo "Restarting CloudLinux Node.js app (${CPANEL_APP_ROOT})..."
+          RESTART_JSON=$(curl -fsS -k -b "$COOKIE_JAR" -X POST \
+            "${BASE_URL}/3rdparty/cloudlinux/cloudlinux-selector.cgi?cgiaction=sendRequest" \
+            --data-urlencode "command=cloudlinux-selector" \
+            --data-urlencode "method=restart" \
+            --data-urlencode "params[interpreter]=nodejs" \
+            --data-urlencode "params[app-root]=${CPANEL_APP_ROOT}")
+
+          node -e "const d = JSON.parse(process.argv[1]); if (d.result !== 'success') { console.error(d); process.exit(1); }" "$RESTART_JSON"
+
+          echo "Waiting 4s and verifying ${LIVE_HEALTH_URL}..."
+          sleep 4
+          curl -fsS --max-time 20 "${LIVE_HEALTH_URL}"
+          echo ""
+          echo "Deployment succeeded!"

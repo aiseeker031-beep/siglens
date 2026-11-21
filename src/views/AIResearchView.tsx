@@ -156,10 +156,10 @@ export const AIResearchView: React.FC = () => {
       <div className="flex flex-wrap items-end justify-between gap-3">
         <div>
           <h1 className="text-xl sm:text-2xl font-bold tracking-tight flex items-center gap-2">
-            <Sparkles className="w-5 h-5 text-[#15803D] dark:text-[#4ADE80]" />
+            <Sparkles className="w-5 h-5 text-[#047857]" />
             Optional AI Research Assistant (BYOK)
           </h1>
-          <p className="text-xs text-[#637369] dark:text-[#8FA398] mt-0.5">
+          <p className="text-xs text-[#64748B] mt-0.5">
             Strictly optional Bring-Your-Own-Key assistant grounded exclusively in SIGLENS deterministic signals, market context, and executable screener rules.
           </p>
         </div>
@@ -167,7 +167,7 @@ export const AIResearchView: React.FC = () => {
         <button
           type="button"
           onClick={() => setActiveSection('settings')}
-          className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-[#E5EAE7] dark:border-[#213028] bg-[#FFFFFF] dark:bg-[#131C17] text-xs font-medium"
+          className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-[#E6E8EE] bg-[#FFFFFF] text-xs font-medium"
         >
           <Settings className="w-3.5 h-3.5" />
           Manage AI Providers
@@ -176,12 +176,12 @@ export const AIResearchView: React.FC = () => {
 
       {/* Honest disabled state when no BYOK profile exists */}
       {profiles.length === 0 ? (
-        <div className="rounded-xl border border-[#E5EAE7] dark:border-[#213028] bg-[#FFFFFF] dark:bg-[#131C17] p-8 text-center space-y-3">
-          <div className="mx-auto w-11 h-11 rounded-xl bg-[#121814]/10 dark:bg-[#22C55E]/15 flex items-center justify-center text-[#15803D] dark:text-[#4ADE80]">
+        <div className="rounded-xl border border-[#E6E8EE] bg-[#FFFFFF] p-8 text-center space-y-3">
+          <div className="mx-auto w-11 h-11 rounded-xl bg-[#121814]/10 flex items-center justify-center text-[#047857]">
             <KeyRound className="w-5 h-5" />
           </div>
           <h2 className="text-base font-bold">AI Research Assistant Is Currently Disabled</h2>
-          <p className="text-xs text-[#637369] dark:text-[#8FA398] max-w-lg mx-auto leading-relaxed">
+          <p className="text-xs text-[#64748B] max-w-lg mx-auto leading-relaxed">
             SIGLENS runs 100% deterministically with zero paid keys required. To enable optional AI narrative explanations or natural-language screening, configure your own API key (OpenAI, Anthropic, Gemini, Groq, OpenAI-compatible, or local Ollama) in Settings. Keys stay in session memory or your passphrase-encrypted browser vault.
           </p>
           <div className="pt-2">
@@ -197,14 +197,14 @@ export const AIResearchView: React.FC = () => {
       ) : (
         <div className="space-y-4">
           {/* Active Provider + Mode Controls */}
-          <div className="rounded-xl border border-[#E5EAE7] dark:border-[#213028] bg-[#FFFFFF] dark:bg-[#131C17] p-3.5 flex flex-wrap items-center justify-between gap-3 text-xs">
+          <div className="rounded-xl border border-[#E6E8EE] bg-[#FFFFFF] p-3.5 flex flex-wrap items-center justify-between gap-3 text-xs">
             <div className="flex flex-wrap items-center gap-2.5">
               <label className="inline-flex items-center gap-1.5">
-                <span className="text-[#637369] dark:text-[#8FA398]">Provider:</span>
+                <span className="text-[#64748B]">Provider:</span>
                 <select
                   value={selectedProfileId}
                   onChange={(e) => setSelectedProfileId(e.target.value)}
-                  className="px-2.5 py-1.5 rounded-lg border border-[#E5EAE7] dark:border-[#213028] bg-[#F3F6F4] dark:bg-[#19241E] font-medium"
+                  className="px-2.5 py-1.5 rounded-lg border border-[#E6E8EE] bg-[#F2F4F7] font-medium"
                 >
                   {profiles.map((p) => (
                     <option key={p.id} value={p.id}>
@@ -214,14 +214,14 @@ export const AIResearchView: React.FC = () => {
                 </select>
               </label>
 
-              <div className="flex items-center gap-1 rounded-lg border border-[#E5EAE7] dark:border-[#213028] bg-[#F3F6F4] dark:bg-[#19241E] p-0.5">
+              <div className="flex items-center gap-1 rounded-lg border border-[#E6E8EE] bg-[#F2F4F7] p-0.5">
                 <button
                   type="button"
                   onClick={() => setMode('explain')}
                   className={`px-2.5 py-1 rounded text-[11px] font-medium ${
                     mode === 'explain'
                       ? 'sig-btn-primary'
-                      : 'text-[#637369] dark:text-[#8FA398]'
+                      : 'text-[#64748B]'
                   }`}
                 >
                   Explain {symbol} ({timeframe})
@@ -232,7 +232,7 @@ export const AIResearchView: React.FC = () => {
                   className={`px-2.5 py-1 rounded text-[11px] font-medium ${
                     mode === 'nl_screen'
                       ? 'sig-btn-primary'
-                      : 'text-[#637369] dark:text-[#8FA398]'
+                      : 'text-[#64748B]'
                   }`}
                 >
                   Natural-Language Screener
@@ -240,15 +240,15 @@ export const AIResearchView: React.FC = () => {
               </div>
             </div>
 
-            <div className="text-[11px] text-[#637369] dark:text-[#8FA398]">
-              Context Anchor: <strong className="text-[#111814] dark:text-[#F4F7F5]">{symbol}</strong> ({exchange} · {timeframe})
+            <div className="text-[11px] text-[#64748B]">
+              Context Anchor: <strong className="text-[#0A0D14]">{symbol}</strong> ({exchange} · {timeframe})
             </div>
           </div>
 
           {/* Unlock Encrypted Key Prompt */}
           {needsKey && (
             <div className="rounded-xl border border-[#E6A832]/40 bg-[#E6A832]/10 p-4 text-xs space-y-2.5">
-              <div className="font-semibold flex items-center gap-1.5 text-[#B7791F] dark:text-[#E6A832]">
+              <div className="font-semibold flex items-center gap-1.5 text-[#B7791F]">
                 <Lock className="w-4 h-4" />
                 {hasEncrypted
                   ? 'Unlock Passphrase-Encrypted API Key'
@@ -261,7 +261,7 @@ export const AIResearchView: React.FC = () => {
                     value={unlockPassphrase}
                     onChange={(e) => setUnlockPassphrase(e.target.value)}
                     placeholder="Enter your encryption passphrase"
-                    className="px-3 py-1.5 rounded-lg border border-[#E5EAE7] dark:border-[#213028] bg-[#FFFFFF] dark:bg-[#131C17] w-64"
+                    className="px-3 py-1.5 rounded-lg border border-[#E6E8EE] bg-[#FFFFFF] w-64"
                   />
                   <button
                     type="submit"
@@ -269,10 +269,10 @@ export const AIResearchView: React.FC = () => {
                   >
                     Unlock for Session
                   </button>
-                  {unlockError && <span className="text-[#BE123C] dark:text-[#FB7185]">{unlockError}</span>}
+                  {unlockError && <span className="text-[#BE123C]">{unlockError}</span>}
                 </form>
               ) : (
-                <p className="text-[#637369] dark:text-[#8FA398]">
+                <p className="text-[#64748B]">
                   This profile uses session-only storage. Re-enter your API key under Settings → AI Providers to activate it for this browser session.
                 </p>
               )}
@@ -290,20 +290,20 @@ export const AIResearchView: React.FC = () => {
                   setMode(sp.mode);
                   submitPrompt(sp.text, sp.mode);
                 }}
-                className="text-left rounded-lg border border-[#E5EAE7] dark:border-[#213028] bg-[#FFFFFF] dark:bg-[#131C17] hover:border-[#16A34A] dark:hover:border-[#4EA1FF] p-3 text-xs transition-colors disabled:opacity-50"
+                className="text-left rounded-lg border border-[#E6E8EE] bg-[#FFFFFF] hover:border-[#059669] p-3 text-xs transition-colors disabled:opacity-50"
               >
-                <div className="text-[10px] font-semibold uppercase tracking-wider text-[#15803D] dark:text-[#4ADE80]">
+                <div className="text-[10px] font-semibold uppercase tracking-wider text-[#047857]">
                   {sp.mode === 'explain' ? 'Signal Analysis' : 'Deterministic NL Screener'}
                 </div>
-                <div className="mt-1 text-[#111814] dark:text-[#F4F7F5]">{sp.text}</div>
+                <div className="mt-1 text-[#0A0D14]">{sp.text}</div>
               </button>
             ))}
           </div>
 
           {/* Conversation Thread */}
-          <div className="rounded-xl border border-[#E5EAE7] dark:border-[#213028] bg-[#FFFFFF] dark:bg-[#131C17] p-4 space-y-4 min-h-[280px]">
+          <div className="rounded-xl border border-[#E6E8EE] bg-[#FFFFFF] p-4 space-y-4 min-h-[280px]">
             {messages.length === 0 ? (
-              <div className="py-12 text-center text-xs text-[#637369] dark:text-[#8FA398]">
+              <div className="py-12 text-center text-xs text-[#64748B]">
                 Ask a technical question about {symbol} or run a natural-language market screen. Every response includes the exact verified JSON context supplied to the model.
               </div>
             ) : (
@@ -312,11 +312,11 @@ export const AIResearchView: React.FC = () => {
                   key={m.id}
                   className={`rounded-lg p-3.5 text-xs space-y-2 ${
                     m.role === 'user'
-                      ? 'bg-[#121814]/8 dark:bg-[#22C55E]/10 border border-[#16A34A]/20 dark:border-[#22C55E]/20 ml-8'
-                      : 'bg-[#F3F6F4] dark:bg-[#19241E] border border-[#E5EAE7] dark:border-[#213028] mr-4'
+                      ? 'bg-[#121814]/8 border border-[#059669]/20 ml-8'
+                      : 'bg-[#F2F4F7] border border-[#E6E8EE] mr-4'
                   }`}
                 >
-                  <div className="flex items-center justify-between text-[10px] text-[#637369] dark:text-[#8FA398]">
+                  <div className="flex items-center justify-between text-[10px] text-[#64748B]">
                     <span className="font-semibold uppercase">
                       {m.role === 'user' ? 'Analyst Query' : `AI Research (${m.modelUsed ?? 'Model'})`}
                     </span>
@@ -326,13 +326,13 @@ export const AIResearchView: React.FC = () => {
 
                   {/* Deterministic Screener Results */}
                   {m.screenerResults && (
-                    <div className="mt-3 rounded-lg border border-[#E5EAE7] dark:border-[#213028] bg-[#FFFFFF] dark:bg-[#131C17] p-3 space-y-2">
+                    <div className="mt-3 rounded-lg border border-[#E6E8EE] bg-[#FFFFFF] p-3 space-y-2">
                       <div className="font-semibold">
                         Verified Deterministic Matches: {m.screenerResults.matchedCount} /{' '}
                         {m.screenerResults.scannedUniverse}
                       </div>
                       {m.screenerResults.interpretedRules.length > 0 && (
-                        <div className="text-[11px] text-[#637369] dark:text-[#8FA398]">
+                        <div className="text-[11px] text-[#64748B]">
                           Parsed Rules: {m.screenerResults.interpretedRules.join(' · ')}
                         </div>
                       )}
@@ -340,7 +340,7 @@ export const AIResearchView: React.FC = () => {
                         <div className="overflow-x-auto">
                           <table className="w-full text-[11px]">
                             <thead>
-                              <tr className="border-b border-[#E5EAE7] dark:border-[#213028] text-[#637369] dark:text-[#8FA398]">
+                              <tr className="border-b border-[#E6E8EE] text-[#64748B]">
                                 <th className="text-left py-1.5">Pair</th>
                                 <th className="text-right py-1.5">Price</th>
                                 <th className="text-right py-1.5">24h %</th>
@@ -349,12 +349,12 @@ export const AIResearchView: React.FC = () => {
                                 <th className="text-right py-1.5">RVOL</th>
                               </tr>
                             </thead>
-                            <tbody className="divide-y divide-[#E8DDD1] dark:divide-[#22C55E]/14">
+                            <tbody className="divide-y divide-[#ECEFF4]">
                               {m.screenerResults.matches.slice(0, 12).map((row) => (
                                 <tr
                                   key={row.canonicalId}
                                   onClick={() => selectMarket(row.exchange, row.marketType, row.displaySymbol, true)}
-                                  className="cursor-pointer hover:bg-[#F3F6F4] dark:hover:bg-[#1D2A22]"
+                                  className="cursor-pointer hover:bg-[#F2F4F7]"
                                 >
                                   <td className="py-1.5 font-semibold">{row.displaySymbol}</td>
                                   <td className="py-1.5 text-right font-mono">${formatPrice(row.price, precision)}</td>
@@ -383,7 +383,7 @@ export const AIResearchView: React.FC = () => {
                         onClick={() =>
                           setExpandedContextId(expandedContextId === m.id ? null : m.id)
                         }
-                        className="inline-flex items-center gap-1 text-[11px] text-[#15803D] dark:text-[#4ADE80] hover:underline"
+                        className="inline-flex items-center gap-1 text-[11px] text-[#047857] hover:underline"
                       >
                         {expandedContextId === m.id ? (
                           <ChevronUp className="w-3.5 h-3.5" />
@@ -405,7 +405,7 @@ export const AIResearchView: React.FC = () => {
           </div>
 
           {error && (
-            <div className="rounded-lg border border-[#FB7185]/40 bg-[#FB7185]/10 px-3.5 py-2 text-xs text-[#BE123C] dark:text-[#FB7185]">
+            <div className="rounded-lg border border-[#FB7185]/40 bg-[#FB7185]/10 px-3.5 py-2 text-xs text-[#BE123C]">
               {error}
             </div>
           )}
@@ -428,12 +428,12 @@ export const AIResearchView: React.FC = () => {
                   ? `Ask about ${symbol} (${timeframe}) indicators, regime, or invalidation...`
                   : 'Describe a deterministic screen (e.g. "RSI below 35 above EMA 200")...'
               }
-              className="flex-1 px-3.5 py-2.5 rounded-xl border border-[#E5EAE7] dark:border-[#213028] bg-[#FFFFFF] dark:bg-[#131C17] text-xs"
+              className="flex-1 px-3.5 py-2.5 rounded-xl border border-[#E6E8EE] bg-[#FFFFFF] text-xs"
             />
             <button
               type="submit"
               disabled={sending || needsKey || !prompt.trim()}
-              className="inline-flex items-center gap-1.5 px-4 py-2.5 rounded-xl bg-[#121814] dark:bg-[#22C55E] text-white dark:text-[#051B0D] text-xs font-semibold disabled:opacity-40"
+              className="inline-flex items-center gap-1.5 px-4 py-2.5 rounded-xl bg-[#121814] text-white text-xs font-semibold disabled:opacity-40"
             >
               <Send className="w-3.5 h-3.5" />
               {sending ? 'Analyzing...' : 'Analyze'}

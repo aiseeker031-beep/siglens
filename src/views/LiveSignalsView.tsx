@@ -124,14 +124,14 @@ export const LiveSignalsView: React.FC = () => {
     <div className="space-y-4">
       <div className="flex flex-wrap items-end justify-between gap-3">
         <div>
-          <p className="text-xs text-[#637369] dark:text-[#8FA398]">
+          <p className="text-xs text-[#64748B]">
             Real-time structured trade setups per pair — Symbol, Direction (BUY/SELL), Entry (NOW / Zone), Stop Loss (SL), and Take Profit (TP1, TP2, TP3) derived deterministically from live ATR(14) &amp; structural S/R zones.
           </p>
         </div>
 
         <div className="flex flex-wrap items-center gap-2 text-xs">
-          <span className="font-mono text-[11px] text-[#637369] dark:text-[#8FA398]">
-            Stream: <strong className="text-[#15803D] dark:text-[#4ADE80]">{wsFreshness}</strong>
+          <span className="font-mono text-[11px] text-[#64748B]">
+            Stream: <strong className="text-[#047857]">{wsFreshness}</strong>
             {scannedAt ? ` · ${formatTimestamp(scannedAt, timezone, false)}` : ''}
           </span>
           <button
@@ -146,7 +146,7 @@ export const LiveSignalsView: React.FC = () => {
       </div>
 
       {/* Mode Switch + Summary Counts */}
-      <div className="flex flex-wrap items-center justify-between gap-3 border-b border-[#E5EAE7] dark:border-[#213028] pb-2.5 text-xs">
+      <div className="flex flex-wrap items-center justify-between gap-3 border-b border-[#E6E8EE] pb-2.5 text-xs">
         <div className="flex items-center gap-1.5">
           <button
             type="button"
@@ -154,7 +154,7 @@ export const LiveSignalsView: React.FC = () => {
             className={`px-3.5 py-1.5 rounded-xl font-semibold transition-all ${
               tab === 'realtime'
                 ? 'sig-btn-primary'
-                : 'text-[#637369] dark:text-[#8FA398] hover:bg-[#EAF0EC] dark:hover:bg-[#19241E]'
+                : 'text-[#64748B] hover:bg-[#EAF0EC]'
             }`}
           >
             Live Pair Signals ({liveRows.length})
@@ -165,7 +165,7 @@ export const LiveSignalsView: React.FC = () => {
             className={`px-3.5 py-1.5 rounded-xl font-semibold transition-all ${
               tab === 'events'
                 ? 'sig-btn-primary'
-                : 'text-[#637369] dark:text-[#8FA398] hover:bg-[#EAF0EC] dark:hover:bg-[#19241E]'
+                : 'text-[#64748B] hover:bg-[#EAF0EC]'
             }`}
           >
             Confirmed Signal History ({events.length})
@@ -173,9 +173,9 @@ export const LiveSignalsView: React.FC = () => {
         </div>
 
         <div className="flex items-center gap-4 font-mono text-xs tabular-nums sig-glass-subtle px-3.5 py-1.5 rounded-full">
-          <span className="text-[#15803D] dark:text-[#4ADE80] font-semibold">BUY: {buyCount}</span>
-          <span className="text-[#BE123C] dark:text-[#FB7185] font-semibold">SELL: {sellCount}</span>
-          <span className="text-[#637369] dark:text-[#9CB0A4]">
+          <span className="text-[#047857] font-semibold">BUY: {buyCount}</span>
+          <span className="text-[#BE123C] font-semibold">SELL: {sellCount}</span>
+          <span className="text-[#64748B]">
             WAIT: {Math.max(0, liveRows.length - buyCount - sellCount)}
           </span>
         </div>
@@ -189,7 +189,7 @@ export const LiveSignalsView: React.FC = () => {
           onChange={(e) => setAssetFilter(e.target.value)}
           placeholder="Symbol e.g. BTCUSDT"
           aria-label="Filter signals by symbol"
-          className="w-40 px-3 py-1.5 rounded-xl sig-glass-subtle font-mono text-[#111814] dark:text-[#F4F7F5] placeholder-[#637369] dark:placeholder-[#8FA398]"
+          className="w-40 px-3 py-1.5 rounded-xl sig-glass-subtle font-mono text-[#0A0D14] placeholder-[#64748B]"
         />
 
         {tab === 'realtime' && (
@@ -200,34 +200,46 @@ export const LiveSignalsView: React.FC = () => {
               onChange={(e) => {
                 const ex = e.target.value as ExchangeId;
                 setExchange(ex);
-                if (ex !== 'bybit' && marketType === 'perpetual') setMarketType('spot');
+                if (ex === 'stocks') setMarketType('equity');
+                else if (ex === 'cfds') setMarketType('cfd');
+                else if (ex !== 'bybit' || marketType === 'equity' || marketType === 'cfd') setMarketType('spot');
               }}
-              className="px-3 py-1.5 rounded-xl sig-glass-subtle text-[#111814] dark:text-[#F4F7F5]"
+              className="px-3 py-1.5 rounded-xl sig-glass-subtle text-[#0A0D14]"
             >
-              <option value="binance" className="bg-white dark:bg-[#131C17]">Binance</option>
-              <option value="bybit" className="bg-white dark:bg-[#131C17]">Bybit</option>
-              <option value="kraken" className="bg-white dark:bg-[#131C17]">Kraken</option>
-              <option value="coinbase" className="bg-white dark:bg-[#131C17]">Coinbase</option>
+              <option value="binance" className="bg-white">Binance</option>
+              <option value="bybit" className="bg-white">Bybit</option>
+              <option value="kraken" className="bg-white">Kraken</option>
+              <option value="coinbase" className="bg-white">Coinbase</option>
+              <option value="stocks" className="bg-white">US Stocks</option>
+              <option value="cfds" className="bg-white">Global CFDs</option>
             </select>
 
             <select
               aria-label="Signals market type"
               value={marketType}
               onChange={(e) => setMarketType(e.target.value as MarketType)}
-              className="px-3 py-1.5 rounded-xl sig-glass-subtle text-[#111814] dark:text-[#F4F7F5]"
+              className="px-3 py-1.5 rounded-xl sig-glass-subtle text-[#0A0D14]"
             >
-              <option value="spot" className="bg-white dark:bg-[#131C17]">Spot</option>
-              {exchange === 'bybit' && <option value="perpetual" className="bg-white dark:bg-[#131C17]">Perpetual</option>}
+              {exchange === 'stocks' ? (
+                <option value="equity" className="bg-white">Equity</option>
+              ) : exchange === 'cfds' ? (
+                <option value="cfd" className="bg-white">CFD</option>
+              ) : (
+                <>
+                  <option value="spot" className="bg-white">Spot</option>
+                  {exchange === 'bybit' && <option value="perpetual" className="bg-white">Perpetual</option>}
+                </>
+              )}
             </select>
 
             <select
               aria-label="Signals timeframe"
               value={timeframe}
               onChange={(e) => setTimeframe(e.target.value as Timeframe)}
-              className="px-3 py-1.5 rounded-xl sig-glass-subtle font-mono text-[#111814] dark:text-[#F4F7F5]"
+              className="px-3 py-1.5 rounded-xl sig-glass-subtle font-mono text-[#0A0D14]"
             >
               {QUICK_TIMEFRAMES.map((tf) => (
-                <option key={tf} value={tf} className="bg-white dark:bg-[#131C17]">
+                <option key={tf} value={tf} className="bg-white">
                   {tf}
                 </option>
               ))}
@@ -239,15 +251,15 @@ export const LiveSignalsView: React.FC = () => {
           aria-label="Filter by direction"
           value={dirFilter}
           onChange={(e) => setDirFilter(e.target.value as DirectionFilter)}
-          className="px-3 py-1.5 rounded-xl sig-glass-subtle text-[#111814] dark:text-[#F4F7F5]"
+          className="px-3 py-1.5 rounded-xl sig-glass-subtle text-[#0A0D14]"
         >
-          <option value="ALL" className="bg-white dark:bg-[#131C17]">All Directions</option>
-          <option value="BUY" className="bg-white dark:bg-[#131C17]">BUY (Long) Only</option>
-          <option value="SELL" className="bg-white dark:bg-[#131C17]">SELL (Short) Only</option>
-          <option value="WAIT" className="bg-white dark:bg-[#131C17]">Neutral / Wait</option>
+          <option value="ALL" className="bg-white">All Directions</option>
+          <option value="BUY" className="bg-white">BUY (Long) Only</option>
+          <option value="SELL" className="bg-white">SELL (Short) Only</option>
+          <option value="WAIT" className="bg-white">Neutral / Wait</option>
         </select>
 
-        <label className="inline-flex items-center gap-2 text-[#637369] dark:text-[#8FA398]">
+        <label className="inline-flex items-center gap-2 text-[#64748B]">
           Min Agreement: {minAgreement}%
           <input
             type="range"
@@ -256,11 +268,11 @@ export const LiveSignalsView: React.FC = () => {
             step={10}
             value={minAgreement}
             onChange={(e) => setMinAgreement(Number(e.target.value))}
-            className="accent-[#16A34A]"
+            className="accent-[#059669]"
           />
         </label>
 
-        <span className="ml-auto font-mono text-[#637369] dark:text-[#8FA398]">
+        <span className="ml-auto font-mono text-[#64748B]">
           {tab === 'realtime' ? `${filteredRealtime.length} pairs` : `${filteredEvents.length} events`}
         </span>
       </div>
@@ -274,7 +286,7 @@ export const LiveSignalsView: React.FC = () => {
         </div>
       ) : tab === 'realtime' ? (
         filteredRealtime.length === 0 ? (
-          <div className="sig-glass rounded-2xl p-8 text-center text-xs text-[#637369] dark:text-[#8FA398]">
+          <div className="sig-glass rounded-2xl p-8 text-center text-xs text-[#64748B]">
             No live pair signals match the selected filters. Adjust direction or agreement filters above.
           </div>
         ) : (
@@ -296,7 +308,7 @@ export const LiveSignalsView: React.FC = () => {
           </div>
         )
       ) : filteredEvents.length === 0 ? (
-        <div className="sig-glass rounded-2xl p-8 text-center text-xs text-[#637369] dark:text-[#8FA398]">
+        <div className="sig-glass rounded-2xl p-8 text-center text-xs text-[#64748B]">
           No confirmed signal history events match the current filter.
         </div>
       ) : (

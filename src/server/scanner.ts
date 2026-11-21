@@ -50,10 +50,13 @@ export async function runScreenerScan(
 
   const tickers = await getMarketTickers(exchange, marketType);
   const coreSet = new Set(CORE_UNIVERSE_BASES);
-  const prioritized = [
-    ...tickers.filter((t) => coreSet.has(t.baseAsset) && (t.quoteAsset === 'USDT' || t.quoteAsset === 'USD')),
-    ...tickers.filter((t) => !coreSet.has(t.baseAsset) && (t.quoteAsset === 'USDT' || t.quoteAsset === 'USD')),
-  ].slice(0, 20);
+  const prioritized =
+    exchange === 'stocks' || exchange === 'cfds'
+      ? tickers.slice(0, 20)
+      : [
+          ...tickers.filter((t) => coreSet.has(t.baseAsset) && (t.quoteAsset === 'USDT' || t.quoteAsset === 'USD')),
+          ...tickers.filter((t) => !coreSet.has(t.baseAsset) && (t.quoteAsset === 'USDT' || t.quoteAsset === 'USD')),
+        ].slice(0, 20);
 
   const entry: ScanCacheEntry = {
     rows: existing?.rows ?? [],

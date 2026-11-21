@@ -1,4 +1,4 @@
-import { CORE_UNIVERSE_BASES, TIMEFRAME_MS } from '../shared/constants';
+import { CFD_UNIVERSE, CORE_UNIVERSE_BASES, STOCK_UNIVERSE, TIMEFRAME_MS, type TraditionalInstrument } from '../shared/constants';
 import type {
   Candle,
   DefiOverview,
@@ -91,6 +91,32 @@ const providerHealth: Record<ProviderStatus['id'], ProviderStatus> = {
     lastError: null,
     supportedMarkets: ['spot'],
   },
+  stocks: {
+    id: 'stocks',
+    name: 'US Equities & ETFs (Yahoo Finance Public)',
+    status: 'DELAYED',
+    wsConnected: false,
+    lastRestSuccessAt: null,
+    lastWsMessageAt: null,
+    latencyMs: null,
+    requestCount: 0,
+    errorCount: 0,
+    lastError: null,
+    supportedMarkets: ['equity'],
+  },
+  cfds: {
+    id: 'cfds',
+    name: 'Global Indices, Metals & FX CFDs (Yahoo Finance Public)',
+    status: 'DELAYED',
+    wsConnected: false,
+    lastRestSuccessAt: null,
+    lastWsMessageAt: null,
+    latencyMs: null,
+    requestCount: 0,
+    errorCount: 0,
+    lastError: null,
+    supportedMarkets: ['cfd'],
+  },
   defillama: {
     id: 'defillama',
     name: 'DefiLlama Public API',
@@ -152,6 +178,7 @@ async function fetchJsonWithMetrics<T>(
   providerId: ProviderStatus['id'],
   url: string,
   timeoutMs = 8000,
+  userAgent = 'SIGLENS-Analytics/1.0',
 ): Promise<T> {
   const stat = providerHealth[providerId];
   stat.requestCount++;
@@ -159,7 +186,7 @@ async function fetchJsonWithMetrics<T>(
   try {
     const res = await fetch(url, {
       signal: AbortSignal.timeout(timeoutMs),
-      headers: { Accept: 'application/json', 'User-Agent': 'SIGLENS-Analytics/1.0' },
+      headers: { Accept: 'application/json', 'User-Agent': userAgent },
     });
     if (!res.ok) {
       throw new Error(`HTTP ${res.status} from ${providerId}`);
@@ -195,7 +222,17 @@ export function parseCanonicalId(canonicalId: string): {
 
 export function toNativeSymbol(exchange: ExchangeId, base: string, quote: string): string {
   const b = base.toUpperCase();
-  const q = quote.toUpperCase();
+  const q = (quote || 'USD').toUpperCase();
+  if (exchange === 'stocks') {
+    const found = STOCK_UNIVERSE.find((x) => x.base === b || x.displaySymbol === `${b}/${q}`);
+    return found ? found.nativeSymbol : b;
+  }
+  if (exchange === 'cfds') {
+    const found = CFD_UNIVERSE.find(
+      (x) => x.displaySymbol === `${b}/${q}` || (x.base === b && x.quote === q) || x.base === b,
+    );
+    return found ? found.nativeSymbol : `${b}${q}=X`;
+  }
   if (exchange === 'coinbase') return `${b}-${q === 'USDT' ? 'USD' : q}`;
   if (exchange === 'kraken') {
     const kb = b === 'BTC' ? 'XBT' : b;
@@ -476,6 +513,138 @@ async function fetchCoinbaseTickers(): Promise<MarketTicker[]> {
   return setCached(key, tickers, 25_000);
 }
 
+const YAHOO_UA =
+  'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/126.0.0.0 Safari/537.36';
+
+interface YahooChartResponse {
+  chart?: {
+    result?: Array<{
+      meta?: {
+        regularMarketPrice?: number;
+        chartPreviousClose?: number;
+        previousClose?: number;
+        regularMarketDayHigh?: number;
+        regularMarketDayLow?: number;
+        regularMarketVolume?: number;
+        regularMarketTime?: number;
+        shortName?: string;
+        exchangeName?: string;
+      };
+      timestamp?: number[];
+      indicators?: {
+        quote?: Array<{
+          open?: Array<number | null>;
+          high?: Array<number | null>;
+          low?: Array<number | null>;
+          close?: Array<number | null>;
+          volume?: Array<number | null>;
+        }>;
+      };
+    }>;
+  };
+}
+
+async function fetchYahooChart(
+  providerId: 'stocks' | 'cfds',
+  nativeSymbol: string,
+  interval: string,
+  range: string,
+): Promise<NonNullable<NonNullable<YahooChartResponse['chart']>['result']>[0] | null> {
+  const pathStr = `/v8/finance/chart/${encodeURIComponent(nativeSymbol)}?interval=${interval}&range=${range}`;
+  let res: YahooChartResponse;
+  try {
+    res = await fetchJsonWithMetrics<YahooChartResponse>(
+      providerId,
+      `https://query1.finance.yahoo.com${pathStr}`,
+      9000,
+      YAHOO_UA,
+    );
+  } catch {
+    res = await fetchJsonWithMetrics<YahooChartResponse>(
+      providerId,
+      `https://query2.finance.yahoo.com${pathStr}`,
+      9000,
+      YAHOO_UA,
+    );
+  }
+  return res.chart?.result?.[0] ?? null;
+}
+
+async function fetchTraditionalUniverseTickers(
+  exchange: 'stocks' | 'cfds',
+  marketType: 'equity' | 'cfd',
+  universe: TraditionalInstrument[],
+): Promise<MarketTicker[]> {
+  const key = `tickers:${exchange}:${marketType}`;
+  const cached = getCached<MarketTicker[]>(key);
+  if (cached) return cached;
+
+  const tickers: MarketTicker[] = [];
+  const now = Date.now();
+  const batchSize = 6;
+
+  for (let i = 0; i < universe.length; i += batchSize) {
+    const batch = universe.slice(i, i + batchSize);
+    const settled = await Promise.allSettled(
+      batch.map(async (inst) => {
+        const result = await fetchYahooChart(exchange, inst.nativeSymbol, '1d', '5d');
+        const meta = result?.meta;
+        const lastPrice = Number(meta?.regularMarketPrice);
+        if (!Number.isFinite(lastPrice) || lastPrice <= 0) return null;
+
+        const rawCloses = (result?.indicators?.quote?.[0]?.close ?? []).filter(
+          (v): v is number => typeof v === 'number' && Number.isFinite(v) && v > 0,
+        );
+        const prevClose =
+          rawCloses.length >= 2
+            ? rawCloses[rawCloses.length - 2]
+            : Number(meta?.previousClose ?? meta?.chartPreviousClose ?? lastPrice);
+        const change24h = lastPrice - prevClose;
+        const change24hPct = prevClose > 0 ? (change24h / prevClose) * 100 : 0;
+        const high24h = Number(meta?.regularMarketDayHigh) || lastPrice;
+        const low24h = Number(meta?.regularMarketDayLow) || lastPrice;
+        const baseVol = Number(meta?.regularMarketVolume) || 0;
+        const quoteVol = baseVol > 0 ? baseVol * lastPrice : 0;
+
+        const tk: MarketTicker = {
+          canonicalId: `${exchange}:${marketType}:${inst.displaySymbol}`,
+          exchange,
+          marketType,
+          baseAsset: inst.base,
+          quoteAsset: inst.quote,
+          displaySymbol: inst.displaySymbol,
+          nativeSymbol: inst.nativeSymbol,
+          lastPrice,
+          bid: null,
+          ask: null,
+          spreadPct: null,
+          change24h,
+          change24hPct,
+          high24h,
+          low24h,
+          baseVolume24h: baseVol,
+          quoteVolume24h: quoteVol,
+          timestamp: meta?.regularMarketTime ? meta.regularMarketTime * 1000 : now,
+          freshness: 'LIVE',
+          source: `${inst.category} · ${inst.name}`,
+        };
+        return tk;
+      }),
+    );
+
+    for (const s of settled) {
+      if (s.status === 'fulfilled' && s.value) {
+        tickers.push(s.value);
+      }
+    }
+  }
+
+  if (exchange === 'stocks') {
+    tickers.sort((a, b) => b.quoteVolume24h - a.quoteVolume24h);
+  }
+  return setCached(key, tickers, 45_000);
+}
+
 export async function getMarketTickers(
   exchange: ExchangeId | 'all' = 'binance',
   marketType: MarketType | 'all' = 'spot',
@@ -491,6 +660,12 @@ export async function getMarketTickers(
     if (marketType === 'all' || marketType === 'perpetual') {
       tasks.push(fetchBybitTickers('perpetual').catch(() => []));
     }
+    if (marketType === 'all' || marketType === 'equity') {
+      tasks.push(fetchTraditionalUniverseTickers('stocks', 'equity', STOCK_UNIVERSE).catch(() => []));
+    }
+    if (marketType === 'all' || marketType === 'cfd') {
+      tasks.push(fetchTraditionalUniverseTickers('cfds', 'cfd', CFD_UNIVERSE).catch(() => []));
+    }
     const all = (await Promise.all(tasks)).flat();
     return all.sort((a, b) => b.quoteVolume24h - a.quoteVolume24h);
   }
@@ -498,6 +673,8 @@ export async function getMarketTickers(
   if (exchange === 'binance') return fetchBinanceSpotTickers();
   if (exchange === 'bybit') return fetchBybitTickers(marketType === 'perpetual' ? 'perpetual' : 'spot');
   if (exchange === 'kraken') return fetchKrakenTickers();
+  if (exchange === 'stocks') return fetchTraditionalUniverseTickers('stocks', 'equity', STOCK_UNIVERSE);
+  if (exchange === 'cfds') return fetchTraditionalUniverseTickers('cfds', 'cfd', CFD_UNIVERSE);
   return fetchCoinbaseTickers();
 }
 
@@ -663,6 +840,93 @@ export async function fetchCandles(
           };
         });
       source = 'Coinbase Exchange Candles';
+    } else if (exchange === 'stocks' || exchange === 'cfds') {
+      const yfSpec: Record<string, { interval: string; range: string; aggregate4h?: boolean }> = {
+        '5m': { interval: '5m', range: '5d' },
+        '15m': { interval: '15m', range: '1mo' },
+        '30m': { interval: '30m', range: '1mo' },
+        '1h': { interval: '60m', range: '3mo' },
+        '4h': { interval: '60m', range: '6mo', aggregate4h: true },
+        '1d': { interval: '1d', range: '2y' },
+        '1w': { interval: '1wk', range: '5y' },
+      };
+      const spec = yfSpec[timeframe] ?? { interval: '60m', range: '3mo' };
+      const result = await fetchYahooChart(exchange, native, spec.interval, spec.range);
+      const timestamps = result?.timestamp ?? [];
+      const q = result?.indicators?.quote?.[0];
+      const opens = q?.open ?? [];
+      const highs = q?.high ?? [];
+      const lows = q?.low ?? [];
+      const closes = q?.close ?? [];
+      const vols = q?.volume ?? [];
+
+      const rawBars: Candle[] = [];
+      const baseStepMs = spec.aggregate4h ? 3_600_000 : intervalMs;
+      for (let i = 0; i < timestamps.length; i++) {
+        const o = opens[i];
+        const h = highs[i];
+        const l = lows[i];
+        const c = closes[i];
+        if (
+          typeof o !== 'number' ||
+          typeof h !== 'number' ||
+          typeof l !== 'number' ||
+          typeof c !== 'number' ||
+          !Number.isFinite(o) ||
+          !Number.isFinite(c) ||
+          c <= 0
+        ) {
+          continue;
+        }
+        const openTime = timestamps[i] * 1000;
+        const closeTime = openTime + baseStepMs - 1;
+        const vol = typeof vols[i] === 'number' && Number.isFinite(vols[i]) ? vols[i]! : 0;
+        rawBars.push({
+          openTime,
+          closeTime,
+          open: o,
+          high: h,
+          low: l,
+          close: c,
+          volume: vol,
+          quoteVolume: vol * c,
+          isClosed: closeTime < now,
+        });
+      }
+
+      if (spec.aggregate4h) {
+        const buckets = new Map<number, Candle>();
+        const bucketMs = 4 * 3_600_000;
+        for (const bar of rawBars) {
+          const bKey = Math.floor(bar.openTime / bucketMs) * bucketMs;
+          const prev = buckets.get(bKey);
+          if (!prev) {
+            buckets.set(bKey, {
+              openTime: bKey,
+              closeTime: bKey + bucketMs - 1,
+              open: bar.open,
+              high: bar.high,
+              low: bar.low,
+              close: bar.close,
+              volume: bar.volume,
+              quoteVolume: (bar.quoteVolume ?? 0),
+              isClosed: bKey + bucketMs - 1 < now,
+            });
+          } else {
+            prev.high = Math.max(prev.high, bar.high);
+            prev.low = Math.min(prev.low, bar.low);
+            prev.close = bar.close;
+            prev.volume += bar.volume;
+            prev.quoteVolume = (prev.quoteVolume ?? 0) + (bar.quoteVolume ?? 0);
+          }
+        }
+        candles = Array.from(buckets.values())
+          .sort((a, b) => a.openTime - b.openTime)
+          .slice(-limit);
+      } else {
+        candles = rawBars.slice(-limit);
+      }
+      source = exchange === 'stocks' ? 'US Equities Public OHLCV' : 'Global CFDs Public OHLCV';
     }
 
     if (candles.length > 0) {
@@ -705,6 +969,21 @@ export async function fetchOrderBook(
   let rawBids: [number, number][] = [];
   let rawAsks: [number, number][] = [];
   let source = '';
+
+  if (exchange === 'stocks' || exchange === 'cfds') {
+    return {
+      canonicalId,
+      exchange,
+      marketType,
+      displaySymbol,
+      bids: [],
+      asks: [],
+      midPrice: 0,
+      spreadPct: 0,
+      timestamp: Date.now(),
+      source: 'L2 order book depth is unavailable for public equity/CFD feeds',
+    };
+  }
 
   if (exchange === 'binance') {
     let data: { bids: string[][]; asks: string[][] };

@@ -1,5 +1,5 @@
-export type ExchangeId = 'binance' | 'bybit' | 'kraken' | 'coinbase';
-export type MarketType = 'spot' | 'perpetual';
+export type ExchangeId = 'binance' | 'bybit' | 'kraken' | 'coinbase' | 'stocks' | 'cfds';
+export type MarketType = 'spot' | 'perpetual' | 'equity' | 'cfd';
 
 export type Timeframe =
   | '1m'
@@ -23,6 +23,7 @@ export type NavSection =
   | 'signals'
   | 'screener'
   | 'heatmaps'
+  | 'arena'
   | 'ai'
   | 'settings';
 
@@ -672,4 +673,148 @@ export interface MarketOverviewPayload {
   }[];
   recentSignals: SignalEventRecord[];
   updatedAt: number;
+}
+
+// =========================================================================
+// AUTONOMOUS PAPER-TRADING BOT & STRATEGY ARENA
+// =========================================================================
+
+export type PaperBotDirectionMode = 'BOTH' | 'LONG_ONLY' | 'SHORT_ONLY';
+export type PaperSide = 'LONG' | 'SHORT';
+export type PaperPositionStatus = 'OPEN' | 'CLOSED';
+
+export interface PaperAccountConfig {
+  startingBalanceUsd: number;
+  cashBalanceUsd: number;
+  maxRiskPerTradePct: number;
+  maxOpenPositions: number;
+  maxDailyDrawdownPct: number;
+  defaultLeverage: number;
+  feeBps: number;
+  slippageBps: number;
+  killSwitchTriggered: boolean;
+  killSwitchReason: string | null;
+  dailyStartEquityUsd: number;
+  dailyResetDay: string;
+  updatedAt: number;
+}
+
+export interface PaperStrategyBot {
+  id: string;
+  name: string;
+  description: string;
+  exchange: ExchangeId;
+  marketType: MarketType;
+  timeframe: Timeframe;
+  enabled: boolean;
+  directionMode: PaperBotDirectionMode;
+  minScore: number;
+  minAgreementPct: number;
+  riskPerTradePct: number;
+  leverage: number;
+  trailingStopAtrMult: number | null;
+  partialTp1Pct: number;
+  cooldownMinutes: number;
+  lastRunAt: number | null;
+  lastActionNote: string | null;
+  createdAt: number;
+}
+
+export interface PaperPosition {
+  id: string;
+  botId: string | null;
+  botName: string;
+  canonicalId: string;
+  exchange: ExchangeId;
+  marketType: MarketType;
+  displaySymbol: string;
+  timeframe: Timeframe;
+  side: PaperSide;
+  status: PaperPositionStatus;
+  entryPrice: number;
+  currentPrice: number;
+  quantity: number;
+  remainingQuantity: number;
+  notionalUsd: number;
+  marginUsd: number;
+  leverage: number;
+  stopLoss: number | null;
+  initialStopLoss: number | null;
+  tp1: number | null;
+  tp2: number | null;
+  tp3: number | null;
+  tp1Hit: boolean;
+  trailingAtr: number | null;
+  feesPaidUsd: number;
+  realizedPnlUsd: number;
+  unrealizedPnlUsd: number;
+  unrealizedPnlPct: number;
+  entryReason: string;
+  exitReason: string | null;
+  openedAt: number;
+  closedAt: number | null;
+}
+
+export interface PaperEquityPoint {
+  id: number;
+  timestamp: number;
+  equityUsd: number;
+  cashUsd: number;
+  unrealizedPnlUsd: number;
+  realizedPnlUsd: number;
+  openCount: number;
+}
+
+export interface PaperBotLogRecord {
+  id: string;
+  botId: string | null;
+  botName: string;
+  level: 'INFO' | 'TRADE' | 'WARN';
+  message: string;
+  timestamp: number;
+}
+
+export interface PaperBotLeaderboardRow {
+  botId: string;
+  botName: string;
+  exchange: ExchangeId;
+  marketType: MarketType;
+  timeframe: Timeframe;
+  enabled: boolean;
+  openCount: number;
+  closedCount: number;
+  wins: number;
+  winRatePct: number;
+  realizedPnlUsd: number;
+  unrealizedPnlUsd: number;
+  totalPnlUsd: number;
+}
+
+export interface PaperArenaSnapshot {
+  account: PaperAccountConfig;
+  metrics: {
+    totalEquityUsd: number;
+    marginUsedUsd: number;
+    unrealizedPnlUsd: number;
+    realizedPnlUsd: number;
+    totalPnlUsd: number;
+    totalPnlPct: number;
+    dailyDrawdownPct: number;
+    maxDrawdownPct: number;
+    winRatePct: number;
+    profitFactor: number | null;
+    avgRMultiple: number | null;
+    openPositionsCount: number;
+    closedTradesCount: number;
+    totalFeesUsd: number;
+    activeBotsCount: number;
+  };
+  bots: PaperStrategyBot[];
+  openPositions: PaperPosition[];
+  closedTrades: PaperPosition[];
+  equityCurve: PaperEquityPoint[];
+  botLeaderboard: PaperBotLeaderboardRow[];
+  recentLogs: PaperBotLogRecord[];
+  lastCycleAt: number | null;
+  timestamp: number;
 }

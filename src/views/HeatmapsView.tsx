@@ -12,10 +12,11 @@ import { useAppStore } from '../store/useAppStore';
 type HeatmapTab = 'performance' | 'volume' | 'signals' | 'correlation' | 'breadth' | 'volatility';
 
 const DEFAULT_CORR_BASES = ['BTC', 'ETH', 'SOL', 'XRP', 'BNB', 'DOGE', 'ADA', 'AVAX', 'LINK', 'SUI'];
+const STOCK_CORR_SYMBOLS = ['AAPL/USD', 'MSFT/USD', 'NVDA/USD', 'AMZN/USD', 'GOOGL/USD', 'META/USD', 'TSLA/USD', 'AMD/USD', 'SPY/USD', 'QQQ/USD'];
+const CFD_CORR_SYMBOLS = ['US500/USD', 'NAS100/USD', 'US30/USD', 'XAU/USD', 'XAG/USD', 'WTI/USD', 'EUR/USD', 'GBP/USD', 'USD/JPY', 'GER40/EUR'];
 
 export const HeatmapsView: React.FC = () => {
   const globalExchange = useAppStore((s) => s.exchange);
-  const theme = useAppStore((s) => s.preferences.theme);
   const selectMarket = useAppStore((s) => s.selectMarket);
 
   const [tab, setTab] = useState<HeatmapTab>('performance');
@@ -28,11 +29,6 @@ export const HeatmapsView: React.FC = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  const isDark =
-    theme === 'dark' ||
-    (theme === 'system' &&
-      typeof window !== 'undefined' &&
-      window.matchMedia('(prefers-color-scheme: dark)').matches);
 
   const quote = exchange === 'kraken' || exchange === 'coinbase' ? 'USD' : 'USDT';
 
@@ -40,7 +36,12 @@ export const HeatmapsView: React.FC = () => {
     setLoading(true);
     setError(null);
     try {
-      const syms = DEFAULT_CORR_BASES.map((b) => `${b}/${quote}`);
+      const syms =
+        exchange === 'stocks'
+          ? STOCK_CORR_SYMBOLS
+          : exchange === 'cfds'
+            ? CFD_CORR_SYMBOLS
+            : DEFAULT_CORR_BASES.map((b) => `${b}/${quote}`);
       const [bRes, cRes] = await Promise.all([
         api.getMarketBreadth(exchange, timeframe),
         api.getCorrelation(syms, exchange, timeframe, corrLookback),
@@ -60,9 +61,9 @@ export const HeatmapsView: React.FC = () => {
 
   const rows: ScreenerRow[] = breadthData?.rows ?? [];
 
-  const textColor = isDark ? '#F4F7FA' : '#17212B';
-  const mutedColor = isDark ? '#8B97A5' : '#677482';
-  const borderColor = isDark ? '#27313C' : '#E6EBF0';
+  const textColor = '#0A0D14';
+  const mutedColor = '#7C8798';
+  const borderColor = '#E6E8EE';
 
   // Performance Treemap Option
   const performanceOption = useMemo<EChartsOption>(() => {
@@ -70,7 +71,7 @@ export const HeatmapsView: React.FC = () => {
       const pct = r.change24hPct;
       const color =
         pct >= 4
-          ? '#16A34A'
+          ? '#059669'
           : pct >= 1
             ? '#248F6D'
             : pct >= 0
@@ -84,14 +85,14 @@ export const HeatmapsView: React.FC = () => {
         name: `${r.baseAsset}\n${formatPercent(pct, 2)}`,
         value: Math.max(1, Math.sqrt(Math.max(r.volume24hUsd, 100_000))),
         rawRow: r,
-        itemStyle: { color, borderColor: isDark ? '#0B0F14' : '#FFFFFF', borderWidth: 2 },
+        itemStyle: { color, borderColor: '#FFFFFF', borderWidth: 2 },
       };
     });
 
     return {
       animation: false,
       tooltip: {
-        backgroundColor: isDark ? '#151B23' : '#FFFFFF',
+        backgroundColor: '#FFFFFF',
         borderColor,
         textStyle: { color: textColor, fontSize: 12 },
         formatter: (params: unknown) => {
@@ -124,7 +125,7 @@ export const HeatmapsView: React.FC = () => {
         },
       ],
     };
-  }, [rows, isDark, borderColor, textColor]);
+  }, [rows, borderColor, textColor]);
 
   // Volume / RVOL Bar Chart
   const volumeOption = useMemo<EChartsOption>(() => {
@@ -135,7 +136,7 @@ export const HeatmapsView: React.FC = () => {
     return {
       tooltip: {
         trigger: 'axis',
-        backgroundColor: isDark ? '#151B23' : '#FFFFFF',
+        backgroundColor: '#FFFFFF',
         borderColor,
         textStyle: { color: textColor, fontSize: 12 },
       },
@@ -171,7 +172,7 @@ export const HeatmapsView: React.FC = () => {
         },
       ],
     };
-  }, [rows, isDark, borderColor, textColor, mutedColor]);
+  }, [rows, borderColor, textColor, mutedColor]);
 
   // Realized Volatility (ATR%) Chart
   const volatilityOption = useMemo<EChartsOption>(() => {
@@ -182,7 +183,7 @@ export const HeatmapsView: React.FC = () => {
     return {
       tooltip: {
         trigger: 'axis',
-        backgroundColor: isDark ? '#151B23' : '#FFFFFF',
+        backgroundColor: '#FFFFFF',
         borderColor,
         textStyle: { color: textColor, fontSize: 12 },
       },
@@ -218,7 +219,7 @@ export const HeatmapsView: React.FC = () => {
         },
       ],
     };
-  }, [rows, isDark, borderColor, textColor, mutedColor]);
+  }, [rows, borderColor, textColor, mutedColor]);
 
   // Pearson Correlation Heatmap
   const correlationOption = useMemo<EChartsOption>(() => {
@@ -234,7 +235,7 @@ export const HeatmapsView: React.FC = () => {
     return {
       tooltip: {
         position: 'top',
-        backgroundColor: isDark ? '#151B23' : '#FFFFFF',
+        backgroundColor: '#FFFFFF',
         borderColor,
         textStyle: { color: textColor, fontSize: 12 },
         formatter: (params: unknown) => {
@@ -279,13 +280,13 @@ export const HeatmapsView: React.FC = () => {
             show: true,
             color: '#F4F7FA',
             fontSize: 10,
-            fontFamily: 'IBM Plex Mono',
+            fontFamily: 'Roboto, sans-serif',
           },
-          itemStyle: { borderColor: isDark ? '#0B0F14' : '#FFFFFF', borderWidth: 1.5 },
+          itemStyle: { borderColor: '#FFFFFF', borderWidth: 1.5 },
         },
       ],
     };
-  }, [corrData, isDark, borderColor, textColor, mutedColor]);
+  }, [corrData, borderColor, textColor, mutedColor]);
 
   // Breadth Chart
   const breadthOption = useMemo<EChartsOption>(() => {
@@ -293,7 +294,7 @@ export const HeatmapsView: React.FC = () => {
     return {
       tooltip: {
         trigger: 'axis',
-        backgroundColor: isDark ? '#151B23' : '#FFFFFF',
+        backgroundColor: '#FFFFFF',
         borderColor,
         textStyle: { color: textColor, fontSize: 12 },
       },
@@ -333,13 +334,13 @@ export const HeatmapsView: React.FC = () => {
             position: 'right',
             formatter: '{c}%',
             color: textColor,
-            fontFamily: 'IBM Plex Mono',
+            fontFamily: 'Roboto, sans-serif',
             fontSize: 11,
           },
         },
       ],
     };
-  }, [breadthData, isDark, borderColor, textColor, mutedColor]);
+  }, [breadthData, borderColor, textColor, mutedColor]);
 
   return (
     <div className="space-y-4">
@@ -349,7 +350,7 @@ export const HeatmapsView: React.FC = () => {
           <h1 className="text-xl sm:text-2xl font-bold tracking-tight">
             Market Heatmaps & Correlation Matrix
           </h1>
-          <p className="text-xs text-[#637369] dark:text-[#8FA398] mt-0.5">
+          <p className="text-xs text-[#64748B] mt-0.5">
             Real-time market breadth, performance treemap, relative volume participation, volatility clusters, and aligned Pearson correlations ({EXCHANGE_LABELS[exchange]}).
           </p>
         </div>
@@ -359,19 +360,21 @@ export const HeatmapsView: React.FC = () => {
             aria-label="Heatmap exchange"
             value={exchange}
             onChange={(e) => setExchange(e.target.value as ExchangeId)}
-            className="px-2.5 py-1.5 rounded-lg border border-[#E5EAE7] dark:border-[#213028] bg-[#FFFFFF] dark:bg-[#131C17]"
+            className="px-2.5 py-1.5 rounded-lg border border-[#E6E8EE] bg-[#FFFFFF]"
           >
             <option value="binance">Binance</option>
             <option value="bybit">Bybit</option>
             <option value="kraken">Kraken</option>
             <option value="coinbase">Coinbase</option>
+            <option value="stocks">US Stocks</option>
+            <option value="cfds">Global CFDs</option>
           </select>
 
           <select
             aria-label="Heatmap timeframe"
             value={timeframe}
             onChange={(e) => setTimeframe(e.target.value as Timeframe)}
-            className="px-2.5 py-1.5 rounded-lg border border-[#E5EAE7] dark:border-[#213028] bg-[#FFFFFF] dark:bg-[#131C17]"
+            className="px-2.5 py-1.5 rounded-lg border border-[#E6E8EE] bg-[#FFFFFF]"
           >
             {QUICK_TIMEFRAMES.map((tf) => (
               <option key={tf} value={tf}>
@@ -385,7 +388,7 @@ export const HeatmapsView: React.FC = () => {
               aria-label="Correlation lookback bars"
               value={corrLookback}
               onChange={(e) => setCorrLookback(Number(e.target.value))}
-              className="px-2.5 py-1.5 rounded-lg border border-[#E5EAE7] dark:border-[#213028] bg-[#FFFFFF] dark:bg-[#131C17]"
+              className="px-2.5 py-1.5 rounded-lg border border-[#E6E8EE] bg-[#FFFFFF]"
             >
               <option value={30}>30 bars</option>
               <option value={60}>60 bars</option>
@@ -396,7 +399,7 @@ export const HeatmapsView: React.FC = () => {
           <button
             type="button"
             onClick={loadData}
-            className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-[#E5EAE7] dark:border-[#213028] bg-[#FFFFFF] dark:bg-[#131C17] font-medium"
+            className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-[#E6E8EE] bg-[#FFFFFF] font-medium"
           >
             <RefreshCw className={`w-3.5 h-3.5 ${loading ? 'animate-spin' : ''}`} />
             Refresh
@@ -405,7 +408,7 @@ export const HeatmapsView: React.FC = () => {
       </div>
 
       {/* Tab Bar */}
-      <div className="flex flex-wrap gap-1.5 border-b border-[#E5EAE7] dark:border-[#213028] pb-2 text-xs">
+      <div className="flex flex-wrap gap-1.5 border-b border-[#E6E8EE] pb-2 text-xs">
         {(
           [
             ['performance', 'Performance Treemap'],
@@ -423,7 +426,7 @@ export const HeatmapsView: React.FC = () => {
             className={`px-3 py-1.5 rounded-lg font-medium transition-colors ${
               tab === id
                 ? 'sig-btn-primary'
-                : 'text-[#637369] dark:text-[#8FA398] hover:bg-[#F3F6F4] dark:hover:bg-[#1D2A22]'
+                : 'text-[#64748B] hover:bg-[#F2F4F7]'
             }`}
           >
             {label}
@@ -432,7 +435,7 @@ export const HeatmapsView: React.FC = () => {
       </div>
 
       {error && (
-        <div className="rounded-xl border border-[#FB7185]/40 bg-[#FB7185]/10 p-4 text-xs text-[#BE123C] dark:text-[#FB7185]">
+        <div className="rounded-xl border border-[#FB7185]/40 bg-[#FB7185]/10 p-4 text-xs text-[#BE123C]">
           {error}
         </div>
       )}
@@ -440,10 +443,10 @@ export const HeatmapsView: React.FC = () => {
       {loading && !breadthData ? (
         <SkeletonBlock className="h-[440px]" />
       ) : (
-        <div className="rounded-xl border border-[#E5EAE7] dark:border-[#213028] bg-[#FFFFFF] dark:bg-[#131C17] p-4">
+        <div className="rounded-xl border border-[#E6E8EE] bg-[#FFFFFF] p-4">
           {tab === 'performance' && (
             <div className="space-y-2">
-              <div className="text-xs text-[#637369] dark:text-[#8FA398]">
+              <div className="text-xs text-[#64748B]">
                 Tile area scales with 24h USD volume; color encodes 24h price performance. Click any tile to inspect in Asset Explorer.
               </div>
               <EChartBox
@@ -460,7 +463,7 @@ export const HeatmapsView: React.FC = () => {
 
           {tab === 'volume' && (
             <div className="space-y-2">
-              <div className="text-xs text-[#637369] dark:text-[#8FA398]">
+              <div className="text-xs text-[#64748B]">
                 Top 20 tracked pairs ranked by 20-bar Relative Volume (RVOL). Amber highlights elevated participation (&ge; 1.8x).
               </div>
               <EChartBox option={volumeOption} height={420} />
@@ -469,7 +472,7 @@ export const HeatmapsView: React.FC = () => {
 
           {tab === 'volatility' && (
             <div className="space-y-2">
-              <div className="text-xs text-[#637369] dark:text-[#8FA398]">
+              <div className="text-xs text-[#64748B]">
                 Normalized Average True Range (ATR 14 as % of close price) across analyzed pairs on {timeframe}.
               </div>
               <EChartBox option={volatilityOption} height={420} />
@@ -478,7 +481,7 @@ export const HeatmapsView: React.FC = () => {
 
           {tab === 'correlation' && (
             <div className="space-y-2">
-              <div className="text-xs text-[#637369] dark:text-[#8FA398]">
+              <div className="text-xs text-[#64748B]">
                 Pearson correlation of log returns computed strictly over aligned candle timestamps ({corrLookback}-bar lookback on {timeframe}). Hover any cell for exact sample count.
               </div>
               <EChartBox option={correlationOption} height={460} />
@@ -488,39 +491,39 @@ export const HeatmapsView: React.FC = () => {
           {tab === 'breadth' && breadthData && (
             <div className="space-y-4">
               <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 text-xs">
-                <div className="p-3 rounded-lg bg-[#F3F6F4] dark:bg-[#19241E] border border-[#E5EAE7] dark:border-[#213028]">
-                  <div className="text-[11px] text-[#637369] dark:text-[#8FA398]">Analyzed Universe</div>
+                <div className="p-3 rounded-lg bg-[#F2F4F7] border border-[#E6E8EE]">
+                  <div className="text-[11px] text-[#64748B]">Analyzed Universe</div>
                   <div className="text-lg font-bold font-mono tabular-nums mt-0.5">
                     {breadthData.analyzedAssets}
                   </div>
                 </div>
-                <div className="p-3 rounded-lg bg-[#F3F6F4] dark:bg-[#19241E] border border-[#E5EAE7] dark:border-[#213028]">
-                  <div className="text-[11px] text-[#637369] dark:text-[#8FA398]">Breadth Score</div>
+                <div className="p-3 rounded-lg bg-[#F2F4F7] border border-[#E6E8EE]">
+                  <div className="text-[11px] text-[#64748B]">Breadth Score</div>
                   <div
                     className={`text-lg font-bold font-mono tabular-nums mt-0.5 ${
                       breadthData.breadthScore >= 0
-                        ? 'text-[#15803D] dark:text-[#4ADE80]'
-                        : 'text-[#BE123C] dark:text-[#FB7185]'
+                        ? 'text-[#047857]'
+                        : 'text-[#BE123C]'
                     }`}
                   >
                     {breadthData.breadthScore > 0 ? `+${breadthData.breadthScore}` : breadthData.breadthScore}
                   </div>
                 </div>
-                <div className="p-3 rounded-lg bg-[#F3F6F4] dark:bg-[#19241E] border border-[#E5EAE7] dark:border-[#213028]">
-                  <div className="text-[11px] text-[#637369] dark:text-[#8FA398]">Above EMA 50</div>
+                <div className="p-3 rounded-lg bg-[#F2F4F7] border border-[#E6E8EE]">
+                  <div className="text-[11px] text-[#64748B]">Above EMA 50</div>
                   <div className="text-lg font-bold font-mono tabular-nums mt-0.5">
                     {breadthData.aboveEma50Pct}%
                   </div>
                 </div>
-                <div className="p-3 rounded-lg bg-[#F3F6F4] dark:bg-[#19241E] border border-[#E5EAE7] dark:border-[#213028]">
-                  <div className="text-[11px] text-[#637369] dark:text-[#8FA398]">Above EMA 200</div>
+                <div className="p-3 rounded-lg bg-[#F2F4F7] border border-[#E6E8EE]">
+                  <div className="text-[11px] text-[#64748B]">Above EMA 200</div>
                   <div className="text-lg font-bold font-mono tabular-nums mt-0.5">
                     {breadthData.aboveEma200Pct}%
                   </div>
                 </div>
               </div>
               <EChartBox option={breadthOption} height={320} />
-              <div className="text-[11px] text-[#637369] dark:text-[#8FA398]">
+              <div className="text-[11px] text-[#64748B]">
                 {breadthData.universeNote}
               </div>
             </div>
@@ -528,7 +531,7 @@ export const HeatmapsView: React.FC = () => {
 
           {tab === 'signals' && (
             <div className="space-y-3">
-              <div className="text-xs text-[#637369] dark:text-[#8FA398]">
+              <div className="text-xs text-[#64748B]">
                 Deterministic signal matrix across tracked {EXCHANGE_LABELS[exchange]} pairs ({timeframe}). Click any card to open full diagnostics.
               </div>
               <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-2.5">
@@ -537,15 +540,15 @@ export const HeatmapsView: React.FC = () => {
                     key={r.canonicalId}
                     type="button"
                     onClick={() => selectMarket(r.exchange, r.marketType, r.displaySymbol, true)}
-                    className="rounded-lg border border-[#E5EAE7] dark:border-[#213028] bg-[#F3F6F4] dark:bg-[#19241E] p-3 text-left hover:border-[#16A34A] dark:hover:border-[#4EA1FF] transition-colors"
+                    className="rounded-lg border border-[#E6E8EE] bg-[#F2F4F7] p-3 text-left hover:border-[#059669] transition-colors"
                   >
                     <div className="flex items-center justify-between gap-1">
                       <span className="text-xs font-bold">{r.baseAsset}</span>
                       <span
                         className={`font-mono text-[11px] tabular-nums ${
                           r.change24hPct >= 0
-                            ? 'text-[#15803D] dark:text-[#4ADE80]'
-                            : 'text-[#BE123C] dark:text-[#FB7185]'
+                            ? 'text-[#047857]'
+                            : 'text-[#BE123C]'
                         }`}
                       >
                         {formatPercent(r.change24hPct, 1)}
@@ -559,7 +562,7 @@ export const HeatmapsView: React.FC = () => {
                         {r.directionalScore > 0 ? `+${r.directionalScore.toFixed(0)}` : r.directionalScore.toFixed(0)}
                       </span>
                     </div>
-                    <div className="mt-1.5 text-[10px] text-[#637369] dark:text-[#8FA398] font-mono tabular-nums">
+                    <div className="mt-1.5 text-[10px] text-[#64748B] font-mono tabular-nums">
                       RSI {r.rsi14?.toFixed(0) ?? '—'} · ADX {r.adx14?.toFixed(0) ?? '—'} · {r.agreementPct}%
                     </div>
                   </button>
