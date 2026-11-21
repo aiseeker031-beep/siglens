@@ -538,27 +538,28 @@ export const PaperArenaView: React.FC = () => {
 
       {/* Row 1: 4 Minimal Kinetic Portfolio KPI Tiles */}
       <section className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4">
-        <KineticCard delay={0} interactive className="rounded-2xl px-4 py-4 flex flex-col justify-between gap-2.5">
-          <div className="flex items-center justify-between text-[10px] font-semibold uppercase tracking-[0.06em] text-[#64748B]">
+        <KineticCard delay={0} surface="dark" interactive className="rounded-[22px] px-5 py-4 flex flex-col justify-between gap-2.5">
+          <div className="flex items-center justify-between text-[10px] font-semibold uppercase tracking-[0.06em] text-[#9BB0A3]">
             <span>Total Equity</span>
             <span>Paper Balance</span>
           </div>
           <div className="flex items-baseline justify-between gap-2 flex-wrap">
             <KineticPrice
+              darkSurface
               value={m?.totalEquityUsd}
               formatted={`$${(m?.totalEquityUsd ?? 10000).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`}
-              className="text-xl font-bold text-[#0A0D14]"
+              className="text-xl font-bold text-white"
             />
             <span
               className={`px-2 py-0.5 rounded-full text-[10px] font-bold ${
-                pnlPos ? 'bg-[#ECFDF5] text-[#059669]' : 'bg-[#FFF1F2] text-[#E11D48]'
+                pnlPos ? 'bg-[#22C55E]/20 text-[#4ADE80]' : 'bg-[#F43F5E]/20 text-[#FB7185]'
               }`}
             >
               {pnlPos ? '+' : ''}
               ${(m?.totalPnlUsd ?? 0).toFixed(2)} ({formatPercent(m?.totalPnlPct ?? 0)})
             </span>
           </div>
-          <div className="text-[10px] text-[#7C8798]">
+          <div className="text-[10px] text-[#7D9486]">
             Unrealized: {(m?.unrealizedPnlUsd ?? 0) >= 0 ? '+' : ''}${(m?.unrealizedPnlUsd ?? 0).toFixed(2)} · Fees: ${(m?.totalFeesUsd ?? 0).toFixed(2)}
           </div>
         </KineticCard>

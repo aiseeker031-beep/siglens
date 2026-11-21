@@ -119,3 +119,4 @@ jobs:
           curl -fsS --max-time 20 "${LIVE_HEALTH_URL}"
           echo ""
           echo "Deployment succeeded!"
+

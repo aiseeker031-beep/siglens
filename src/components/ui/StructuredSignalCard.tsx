@@ -40,17 +40,19 @@ export const StructuredSignalCard: React.FC<StructuredSignalCardProps> = ({
   const isBuy = setup.direction === 'BUY';
   const isSell = setup.direction === 'SELL';
 
-  const dirColor = isBuy
-    ? 'text-[#059669]'
+  const cardSurface = isBuy
+    ? 'sig-signal-buy'
     : isSell
-      ? 'text-[#E11D48]'
-      : 'text-[#B45309]';
+      ? 'sig-signal-sell'
+      : 'sig-signal-neutral';
+
+  const dirColor = isBuy ? 'text-[#4ADE80]' : isSell ? 'text-[#FB7185]' : 'text-[#A3ABA6]';
 
   const dirBadge = isBuy
-    ? 'bg-[#ECFDF5] text-[#047857] border border-[#A7F3D0]'
+    ? 'bg-[#22C55E]/20 text-[#4ADE80]'
     : isSell
-      ? 'bg-[#FFF1F2] text-[#BE123C] border border-[#FECDD3]'
-      : 'bg-[#FFFBEB] text-[#B45309] border border-[#FDE68A]';
+      ? 'bg-[#F43F5E]/20 text-[#FB7185]'
+      : 'bg-white/[0.09] text-[#C8D0CC]';
 
   const activeEntryPrice = livePrice ?? setup.entryPrice;
 
@@ -62,49 +64,38 @@ export const StructuredSignalCard: React.FC<StructuredSignalCardProps> = ({
       setCopied(true);
       window.setTimeout(() => setCopied(false), 1800);
     } catch {
-      // clipboard unavailable in restricted contexts
+      // clipboard unavailable
     }
   };
 
   return (
     <motion.div
       data-testid="structured-signal-card"
+      data-direction={setup.direction}
       initial={{ opacity: 0, y: 8 }}
       animate={{ opacity: 1, y: 0 }}
       whileHover={{ y: -2 }}
-      transition={{ duration: 0.28, ease: KINETIC_EASE }}
-      className={`sig-glass sig-glass-interactive rounded-2xl ${compact ? 'p-3.5' : 'p-4'} space-y-3`}
+      transition={{ duration: 0.25, ease: KINETIC_EASE }}
+      onClick={onOpenPair}
+      className={`${cardSurface} ${compact ? 'p-3' : 'p-4'} space-y-2.5 ${onOpenPair ? 'cursor-pointer' : ''}`}
     >
-      {/* Card Header: Symbol + Meta + Copy */}
+      {/* Card Header */}
       <div className="flex items-start justify-between gap-2">
         <div className="min-w-0">
-          <div className="flex flex-wrap items-center gap-2">
-            {onOpenPair ? (
-              <button
-                type="button"
-                onClick={onOpenPair}
-                className="inline-flex items-center gap-1 font-mono text-sm font-bold text-[#0A0D14] hover:text-[#2563EB] transition-colors"
-              >
-                {setup.symbol}
-                <ExternalLink className="w-3 h-3 opacity-60" />
-              </button>
-            ) : (
-              <span className="font-mono text-sm font-bold text-[#0A0D14]">
-                {setup.symbol}
-              </span>
-            )}
-            <span className={`px-2 py-0.5 rounded-full text-[11px] font-mono font-semibold ${dirBadge}`}>
-              {setup.directionLabel}
+          <div className="flex flex-wrap items-center gap-1.5">
+            <span className="inline-flex items-center gap-1 font-mono text-[13px] font-bold tracking-tight text-white truncate">
+              {setup.symbol}
+              {onOpenPair && <ExternalLink className="w-3 h-3 opacity-55" />}
             </span>
-            {statusTag && (
-              <span className="text-[10px] font-mono text-[#7C8798]">
-                {statusTag}
-              </span>
-            )}
+            <span className="font-mono text-[10px] text-white/50 uppercase">{timeframe}</span>
+            <span className={`px-2 py-0.5 rounded-[6px] text-[10px] font-mono font-bold tracking-wide ${dirBadge}`}>
+              {setup.direction}
+            </span>
+            {statusTag && <span className="text-[10px] font-mono text-white/50">{statusTag}</span>}
           </div>
-          {(exchangeLabel || timeframe || timestampLabel) && (
-            <div className="text-[11px] font-mono text-[#7C8798] mt-0.5">
-              {[exchangeLabel, marketType, timeframe, timestampLabel].filter(Boolean).join(' · ')}
+          {(exchangeLabel || marketType || timestampLabel) && (
+            <div className="text-[10px] font-mono text-white/50 mt-0.5">
+              {[exchangeLabel, marketType, timestampLabel].filter(Boolean).join(' · ')}
             </div>
           )}
         </div>
@@ -114,11 +105,11 @@ export const StructuredSignalCard: React.FC<StructuredSignalCardProps> = ({
           onClick={handleCopy}
           title="Copy formatted signal"
           aria-label={`Copy ${setup.symbol} signal`}
-          className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full sig-glass-subtle text-[11px] font-medium text-[#4B5565] hover:text-[#0A0D14] hover:border-[#CFD6E3] transition-colors shrink-0"
+          className="inline-flex items-center gap-1 px-2 py-1 rounded-[6px] bg-white/[0.08] hover:bg-white/[0.16] text-[10px] font-medium text-white/80 hover:text-white transition-colors shrink-0"
         >
           {copied ? (
             <>
-              <Check className="w-3 h-3 text-[#059669]" />
+              <Check className="w-3 h-3 text-[#4ADE80]" />
               Copied
             </>
           ) : (
@@ -130,55 +121,39 @@ export const StructuredSignalCard: React.FC<StructuredSignalCardProps> = ({
         </button>
       </div>
 
-      {/* Exact 5-Field Structured Signal Layout */}
-      <dl className="space-y-2 text-xs">
-        <div className="flex items-baseline justify-between gap-2 pb-1.5 border-b border-[#ECEFF4]">
-          <dt className="text-[#64748B]">• Symbol:</dt>
-          <dd className="font-mono font-semibold tabular-nums text-[#0A0D14]">
-            {setup.symbol}
-          </dd>
+      {/* 5-Field Structured Signal Layout */}
+      <dl className="space-y-1.5 text-[11px]">
+        <div className="flex items-baseline justify-between gap-2 pb-1 border-b border-white/[0.08]">
+          <dt className="text-white/55">• Symbol</dt>
+          <dd className="font-mono font-semibold tabular-nums text-white">{setup.symbol}</dd>
         </div>
 
-        <div className="flex items-baseline justify-between gap-2 pb-1.5 border-b border-[#ECEFF4]">
-          <dt className="text-[#64748B]">• Direction:</dt>
-          <dd className={`font-mono font-bold ${dirColor}`}>
-            {setup.directionLabel}
-          </dd>
+        <div className="flex items-baseline justify-between gap-2 pb-1 border-b border-white/[0.08]">
+          <dt className="text-white/55">• Direction</dt>
+          <dd className={`font-mono font-bold ${dirColor}`}>{setup.directionLabel}</dd>
         </div>
 
-        <div className="flex items-baseline justify-between gap-2 pb-1.5 border-b border-[#ECEFF4]">
-          <dt className="text-[#64748B] shrink-0">• Entry:</dt>
-          <dd className="font-mono font-semibold tabular-nums text-right text-[#0A0D14]">
+        <div className="flex items-baseline justify-between gap-2 pb-1 border-b border-white/[0.08]">
+          <dt className="text-white/55 shrink-0">• Entry</dt>
+          <dd className="font-mono font-semibold tabular-nums text-right text-white">
             {setup.direction === 'WAIT' ? (
-              <span className="text-[#64748B]">
-                WAIT (Price: ${formatPrice(activeEntryPrice, precision)})
-              </span>
+              <span className="text-white/60">WAIT (${formatPrice(activeEntryPrice, precision)})</span>
             ) : setup.entryMode === 'NOW' ? (
               <div>
-                <span className="text-[#059669] font-bold">NOW</span>{' '}
+                <span className="text-[#4ADE80] font-bold">NOW</span>{' '}
                 <span>(${formatPrice(activeEntryPrice, precision)})</span>
-                {setup.entryZoneLow !== null && setup.entryZoneHigh !== null && (
-                  <div className="text-[10px] font-normal text-[#7C8798]">
-                    Zone: ${formatPrice(setup.entryZoneLow, precision)} – ${formatPrice(setup.entryZoneHigh, precision)}
-                  </div>
-                )}
               </div>
             ) : (
               <div>
-                <span>
-                  ${formatPrice(setup.entryZoneLow, precision)} – ${formatPrice(setup.entryZoneHigh, precision)}
-                </span>
-                <div className="text-[10px] font-normal text-[#7C8798]">
-                  Live: ${formatPrice(activeEntryPrice, precision)}
-                </div>
+                ${formatPrice(setup.entryZoneLow, precision)} – ${formatPrice(setup.entryZoneHigh, precision)}
               </div>
             )}
           </dd>
         </div>
 
-        <div className="flex items-baseline justify-between gap-2 pb-1.5 border-b border-[#ECEFF4]">
-          <dt className="text-[#64748B] shrink-0">• Stop Loss (SL):</dt>
-          <dd className="font-mono font-semibold tabular-nums text-right text-[#E11D48]">
+        <div className="flex items-baseline justify-between gap-2 pb-1 border-b border-white/[0.08]">
+          <dt className="text-white/55 shrink-0">• Stop Loss</dt>
+          <dd className="font-mono font-semibold tabular-nums text-right text-[#FB7185]">
             {setup.stopLoss !== null ? (
               <>
                 ${formatPrice(setup.stopLoss, precision)}{' '}
@@ -190,34 +165,28 @@ export const StructuredSignalCard: React.FC<StructuredSignalCardProps> = ({
                 )}
               </>
             ) : (
-              <span className="text-[#7C8798]">—</span>
+              <span className="text-white/45">—</span>
             )}
           </dd>
         </div>
 
         <div className="space-y-1.5">
-          <dt className="text-[#64748B]">• Take Profit (TP):</dt>
+          <dt className="text-white/55">• Take Profit</dt>
           {setup.takeProfits.length === 0 ? (
-            <dd className="font-mono text-[11px] text-[#7C8798] pl-3">
-              No active targets (Neutral confluence)
-            </dd>
+            <dd className="font-mono text-[10px] text-white/50 pl-3">No active targets (Neutral confluence)</dd>
           ) : (
             <dd className="grid grid-cols-3 gap-1.5 pt-0.5">
               {setup.takeProfits.map((tp) => (
                 <div
                   key={tp.label}
-                  className="rounded-xl sig-glass-subtle px-2 py-1.5 font-mono tabular-nums"
+                  className="rounded-lg bg-white/[0.06] px-2 py-1.5 font-mono tabular-nums"
                 >
-                  <div className="flex items-center justify-between text-[10px] text-[#64748B]">
-                    <span className="font-semibold text-[#059669]">{tp.label}</span>
+                  <div className="flex items-center justify-between text-[9px] text-white/60">
+                    <span className="font-bold text-[#4ADE80]">{tp.label}</span>
                     <span>{tp.rrRatio.toFixed(1)}R</span>
                   </div>
-                  <div className="text-[11px] font-semibold text-[#0A0D14] mt-0.5 truncate">
+                  <div className="text-[11px] font-semibold text-white mt-0.5 truncate">
                     ${formatPrice(tp.price, precision)}
-                  </div>
-                  <div className="text-[10px] text-[#059669]">
-                    {tp.pctFromEntry > 0 ? '+' : ''}
-                    {tp.pctFromEntry.toFixed(2)}%
                   </div>
                 </div>
               ))}
@@ -226,17 +195,18 @@ export const StructuredSignalCard: React.FC<StructuredSignalCardProps> = ({
         </div>
       </dl>
 
-      {/* Footer Transparency Strip */}
-      <div className="pt-1 flex flex-wrap items-center justify-between gap-x-2 gap-y-1 text-[10px] font-mono text-[#7C8798]">
-        <span className="leading-snug">{setup.methodology}</span>
-        {(score !== undefined || agreementPct !== undefined) && (
-          <span className="shrink-0">
-            {score !== undefined ? `Score ${score > 0 ? `+${score}` : score}` : ''}
-            {score !== undefined && agreementPct !== undefined ? ' · ' : ''}
-            {agreementPct !== undefined ? `Agree ${agreementPct}%` : ''}
-          </span>
-        )}
-      </div>
+      {!compact && (
+        <div className="pt-1 flex flex-wrap items-center justify-between gap-2 text-[10px] font-mono text-white/45">
+          <span className="truncate">{setup.methodology}</span>
+          {(score !== undefined || agreementPct !== undefined) && (
+            <span className="shrink-0">
+              {score !== undefined ? `Score ${score > 0 ? `+${score}` : score}` : ''}
+              {score !== undefined && agreementPct !== undefined ? ' · ' : ''}
+              {agreementPct !== undefined ? `Agree ${agreementPct}%` : ''}
+            </span>
+          )}
+        </div>
+      )}
     </motion.div>
   );
 };
