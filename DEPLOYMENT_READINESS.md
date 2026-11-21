@@ -28,7 +28,8 @@ Configure in **cPanel → Setup Node.js App → Environment Variables**:
 |---|---|---|
 | `NODE_ENV` | Auto-set in `app.cjs` | Set to `production` to serve static `dist/` and enable strict security checks. |
 | `PORT` | Managed by Passenger | Listening port injected by LiteSpeed Passenger (falls back to `3000`). |
-| `APP_URL` | Recommended | Canonical public origin (e.g. `https://siglens.cc.cd`) used for Google OAuth redirect URI & Same-Origin checks. |
+| `APP_URL` | **Configured on cPanel** | Canonical public origin (`https://siglens.cc.cd`) used for Google OAuth redirect URI & Same-Origin checks. |
+| `CRON_SECRET` | **Configured on cPanel + Cron** | Shared secret sent via `X-Cron-Secret` header by the 5-minute Hostcry Cron Job to authorize `POST /api/paper/tick`. |
 | `GOOGLE_CLIENT_ID` | Optional (Required for Google Sign-In) | Google Cloud OAuth 2.0 Web Client ID. |
 | `GOOGLE_CLIENT_SECRET` | Optional (Required for Google Sign-In) | Google Cloud OAuth 2.0 Web Client Secret. |
 | `ALLOW_LOCAL_OLLAMA` | Optional (`false` by default) | Keep unset/`false` on shared hosting to prevent local loopback AI proxying. |

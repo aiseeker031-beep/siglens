@@ -204,23 +204,23 @@ During this evidence-based audit of both the source repository and the live prod
 - **Status:** Fixed
 
 ### SIG-014
-- **Severity:** Low / Operational (External Provider Geo-Block)
+- **Severity:** Medium (External Provider US Geo-Block)
 - **Category:** Market-Data Integration / Hosting
-- **Affected file:** `src/server/providers.ts` (`bybit` REST endpoints)
-- **Affected endpoint or component:** `GET /api/markets?exchange=bybit`, `GET /api/derivatives`
-- **Description:** Hostcry's US-located IP (`66.29.138.229`) receives `HTTP 403` from Bybit's CloudFront WAF on REST endpoints (`api.bybit.com`), even though `wss://stream.bybit.com/v5/public/linear` connects cleanly.
-- **Evidence:** Live production probe returned `502 {"error":"HTTP 403 from bybit"}` on `/api/markets?exchange=bybit` and `/api/derivatives`.
+- **Affected file:** `src/server/providers.ts` (`fetchDerivativesOverview`, `fetchDerivativesDetail`)
+- **Affected endpoint or component:** `GET /api/derivatives`, `GET /api/derivatives/:base`
+- **Description:** Hostcry's US-located IP (`66.29.138.229`) receives `HTTP 403` from Bybit's CloudFront WAF on REST endpoints (`api.bybit.com`).
+- **Evidence:** Baseline live production probe returned `502 {"error":"HTTP 403 from bybit"}` on `/api/derivatives`.
 - **Root cause:** Verified — Bybit CloudFront US IP geo-restriction on shared host egress IP.
-- **Fix:** Handled gracefully without fabricating data (Binance, Kraken, Coinbase, US Stocks, Global CFDs, DefiLlama, and Arbitrage all operate live). Full Bybit REST support requires non-US hosting or an authorized EU proxy.
-- **Verification:** Confirmed error is surfaced cleanly as HTTP `502` JSON with zero mock substitution.
-- **Status:** Open (Hosting-IP Restriction)
+- **Fix:** Implemented real live unauthenticated **Hyperliquid Public Perpetuals API** (`https://api.hyperliquid.xyz/info`, `metaAndAssetCtxs` + `fundingHistory`) fallback whenever `api.bybit.com` fails, returning 30 live perpetual markets (mark/oracle price, funding rate, open interest, volume) and 48h funding history with zero mock data. (Direct `exchange=bybit` spot REST remains geo-blocked by Bybit CloudFront; Binance, Kraken, Coinbase, Stocks, CFDs, and Hyperliquid Perpetuals are all live.)
+- **Verification:** Verified live on `https://siglens.cc.cd/api/derivatives` (`200 OK`, 30 markets) and `/api/derivatives/BTC` (`200 OK`, 48 funding points).
+- **Status:** Fixed (Derivatives Fallback Live)
 
 ---
 
 ## 5. Unverified Areas & Remaining Risks
 
-1. **End-to-End Google OAuth Token Exchange (`GET /api/auth/google/callback`)**: OAuth routes, CSRF state cookie, and SQLite session persistence are implemented and verified up to the honest `503` unconfigured guard, but live Google sign-in cannot complete until `GOOGLE_CLIENT_ID` and `GOOGLE_CLIENT_SECRET` are added in Hostcry cPanel → Setup Node.js App → Environment Variables.
-2. **Single-Tenant Shared State**: SQLite preferences, watchlist, alert rules, and paper-trading account are currently shared per server instance rather than scoped per `auth_user.id`. If SIGLENS transitions to multi-user public SaaS, per-user authentication middleware and `user_id` ownership scoping should be added to all mutating endpoints.
-3. **Unused NPM Packages Retained**: `@google/genai`, `three`, `@types/three`, and `lightweight-charts` remain in `package.json` without active runtime imports (kept untouched to avoid lockfile peer-dependency churn during audit; safe to prune in a dedicated dependency cleanup).
+1. **End-to-End Google OAuth Token Exchange (`GET /api/auth/google/callback`)**: OAuth routes, CSRF state cookie, SQLite session persistence, `APP_URL=https://siglens.cc.cd`, and per-user preferences/watchlist scoping (`src/server/db.ts`) are all deployed and verified up to the honest `503` unconfigured guard, awaiting only the user's own `GOOGLE_CLIENT_ID` and `GOOGLE_CLIENT_SECRET` in Hostcry cPanel Environment Variables.
+2. **Cron & Workspace Hardening**: `POST /api/paper/tick` is now protected in production via `CRON_SECRET` (`401` without header, `200` with matching `X-Cron-Secret` from the 5-minute Hostcry Cron Job, while keeping same-origin browser UI clicks working). Preferences and watchlists automatically isolate per Google `user.id` when signed in; paper-trading ledger and alert rules remain shared-instance until multi-tenant user auth is required.
+3. **Unused NPM Packages Pruned**: Removed unused `@google/genai`, `three`, `@types/three`, and `lightweight-charts` from `package.json`.
 4. **Destructive Stress Testing**: Intentionally omitted against live production per audit safety rules.
 

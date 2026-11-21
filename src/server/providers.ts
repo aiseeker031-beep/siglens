@@ -1078,93 +1078,191 @@ export async function fetchDerivativesOverview(): Promise<{
   const cached = getCached<{ markets: DerivativesMarket[]; source: string; updatedAt: number }>(key);
   if (cached) return cached;
 
-  const res = await fetchJsonWithMetrics<{ result?: { list?: Record<string, string>[] } }>(
-    'bybit',
-    'https://api.bybit.com/v5/market/tickers?category=linear',
-    9000,
-  );
-  const list = res.result?.list ?? [];
-  const coreSet = new Set(CORE_UNIVERSE_BASES.map((b) => `${b}USDT`));
-  const filtered = list
-    .filter((item) => item.symbol && item.symbol.endsWith('USDT') && (coreSet.has(item.symbol) || Number(item.turnover24h) > 50_000_000))
-    .sort((a, b) => Number(b.turnover24h) - Number(a.turnover24h))
-    .slice(0, 30);
+  try {
+    const res = await fetchJsonWithMetrics<{ result?: { list?: Record<string, string>[] } }>(
+      'bybit',
+      'https://api.bybit.com/v5/market/tickers?category=linear',
+      9000,
+    );
+    const list = res.result?.list ?? [];
+    const coreSet = new Set(CORE_UNIVERSE_BASES.map((b) => `${b}USDT`));
+    const filtered = list
+      .filter((item) => item.symbol && item.symbol.endsWith('USDT') && (coreSet.has(item.symbol) || Number(item.turnover24h) > 50_000_000))
+      .sort((a, b) => Number(b.turnover24h) - Number(a.turnover24h))
+      .slice(0, 30);
 
-  // Fetch official Bybit public long/short ratio for top 8 symbols concurrently
-  const lsMap = new Map<string, { buyRatio: number; sellRatio: number }>();
-  await Promise.allSettled(
-    filtered.slice(0, 8).map(async (item) => {
-      const lsRes = await fetchJsonWithMetrics<{ result?: { list?: { buyRatio: string; sellRatio: string }[] } }>(
-        'bybit',
-        `https://api.bybit.com/v5/market/account-ratio?category=linear&symbol=${item.symbol}&period=1h&limit=1`,
-        5000,
-      );
-      const latest = lsRes.result?.list?.[0];
-      if (latest) {
-        lsMap.set(item.symbol, {
-          buyRatio: Number(latest.buyRatio),
-          sellRatio: Number(latest.sellRatio),
-        });
+    // Fetch official Bybit public long/short ratio for top 8 symbols concurrently
+    const lsMap = new Map<string, { buyRatio: number; sellRatio: number }>();
+    await Promise.allSettled(
+      filtered.slice(0, 8).map(async (item) => {
+        const lsRes = await fetchJsonWithMetrics<{ result?: { list?: { buyRatio: string; sellRatio: string }[] } }>(
+          'bybit',
+          `https://api.bybit.com/v5/market/account-ratio?category=linear&symbol=${item.symbol}&period=1h&limit=1`,
+          5000,
+        );
+        const latest = lsRes.result?.list?.[0];
+        if (latest) {
+          lsMap.set(item.symbol, {
+            buyRatio: Number(latest.buyRatio),
+            sellRatio: Number(latest.sellRatio),
+          });
+        }
+      }),
+    );
+
+    const now = Date.now();
+    const markets: DerivativesMarket[] = filtered.map((item) => {
+      const base = item.symbol.slice(0, -4);
+      const displaySymbol = `${base}/USDT`;
+      const lastPrice = Number(item.lastPrice) || 0;
+      const markPrice = Number(item.markPrice) || lastPrice;
+      const indexPrice = Number(item.indexPrice) || lastPrice;
+      const premiumPct = indexPrice > 0 ? ((markPrice - indexPrice) / indexPrice) * 100 : 0;
+      const fundingRate = Number(item.fundingRate) || 0;
+      const fundingRatePct = fundingRate * 100;
+      const change24hPct = (Number(item.price24hPcnt) || 0) * 100;
+      const ls = lsMap.get(item.symbol);
+      const longShortRatio = ls && ls.sellRatio > 0 ? ls.buyRatio / ls.sellRatio : null;
+
+      let observation = 'Balanced funding and neutral perpetual basis.';
+      if (fundingRatePct >= 0.03) {
+        observation = 'Elevated positive funding indicates crowded long perpetual positioning.';
+      } else if (fundingRatePct <= -0.02) {
+        observation = 'Negative funding reflects short perpetual hedging or bearish skew.';
+      } else if (Math.abs(premiumPct) >= 0.15) {
+        observation =
+          premiumPct > 0
+            ? 'Perpetual trading at a notable premium over spot index.'
+            : 'Perpetual trading at a discount relative to spot index.';
       }
-    }),
-  );
 
-  const now = Date.now();
-  const markets: DerivativesMarket[] = filtered.map((item) => {
-    const base = item.symbol.slice(0, -4);
-    const displaySymbol = `${base}/USDT`;
-    const lastPrice = Number(item.lastPrice) || 0;
-    const markPrice = Number(item.markPrice) || lastPrice;
-    const indexPrice = Number(item.indexPrice) || lastPrice;
-    const premiumPct = indexPrice > 0 ? ((markPrice - indexPrice) / indexPrice) * 100 : 0;
-    const fundingRate = Number(item.fundingRate) || 0;
-    const fundingRatePct = fundingRate * 100;
-    const change24hPct = (Number(item.price24hPcnt) || 0) * 100;
-    const ls = lsMap.get(item.symbol);
-    const longShortRatio = ls && ls.sellRatio > 0 ? ls.buyRatio / ls.sellRatio : null;
+      return {
+        canonicalId: `bybit:perpetual:${displaySymbol}`,
+        exchange: 'bybit',
+        displaySymbol,
+        nativeSymbol: item.symbol,
+        lastPrice,
+        markPrice,
+        indexPrice,
+        premiumPct,
+        fundingRate,
+        fundingRatePct,
+        nextFundingTime: Number(item.nextFundingTime) || 0,
+        openInterest: Number(item.openInterest) || 0,
+        openInterestValueUsd: Number(item.openInterestValue) || 0,
+        volume24hUsd: Number(item.turnover24h) || 0,
+        change24hPct,
+        longShortRatio,
+        buyRatio: ls?.buyRatio ?? null,
+        sellRatio: ls?.sellRatio ?? null,
+        observation,
+        timestamp: now,
+        source: 'Bybit V5 Linear Perpetual Public API',
+      };
+    });
 
-    let observation = 'Balanced funding and neutral perpetual basis.';
-    if (fundingRatePct >= 0.03) {
-      observation = 'Elevated positive funding indicates crowded long perpetual positioning.';
-    } else if (fundingRatePct <= -0.02) {
-      observation = 'Negative funding reflects short perpetual hedging or bearish skew.';
-    } else if (Math.abs(premiumPct) >= 0.15) {
-      observation =
-        premiumPct > 0
-          ? 'Perpetual trading at a notable premium over spot index.'
-          : 'Perpetual trading at a discount relative to spot index.';
+    return setCached(
+      key,
+      { markets, source: 'Bybit V5 Linear Perpetual Public API', updatedAt: now },
+      20_000,
+    );
+  } catch {
+    // Fallback to Hyperliquid public unauthenticated perpetuals API (globally reachable from US servers)
+    const hlRes = await fetch('https://api.hyperliquid.xyz/info', {
+      method: 'POST',
+      signal: AbortSignal.timeout(9000),
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ type: 'metaAndAssetCtxs' }),
+    });
+    if (!hlRes.ok) {
+      throw new Error(`Derivatives providers unavailable (Bybit blocked, Hyperliquid HTTP ${hlRes.status})`);
     }
+    const [meta, ctxs] = (await hlRes.json()) as [
+      { universe?: { name: string }[] },
+      {
+        funding?: string;
+        openInterest?: string;
+        prevDayPx?: string;
+        dayNtlVlm?: string;
+        premium?: string;
+        oraclePx?: string;
+        markPx?: string;
+      }[],
+    ];
+    const universe = meta?.universe ?? [];
+    const coreSet = new Set(CORE_UNIVERSE_BASES);
+    const now = Date.now();
+    const nextHour = Math.ceil(now / 3_600_000) * 3_600_000;
 
-    return {
-      canonicalId: `bybit:perpetual:${displaySymbol}`,
-      exchange: 'bybit',
-      displaySymbol,
-      nativeSymbol: item.symbol,
-      lastPrice,
-      markPrice,
-      indexPrice,
-      premiumPct,
-      fundingRate,
-      fundingRatePct,
-      nextFundingTime: Number(item.nextFundingTime) || 0,
-      openInterest: Number(item.openInterest) || 0,
-      openInterestValueUsd: Number(item.openInterestValue) || 0,
-      volume24hUsd: Number(item.turnover24h) || 0,
-      change24hPct,
-      longShortRatio,
-      buyRatio: ls?.buyRatio ?? null,
-      sellRatio: ls?.sellRatio ?? null,
-      observation,
-      timestamp: now,
-      source: 'Bybit V5 Linear Perpetual Public API',
-    };
-  });
+    const mapped: DerivativesMarket[] = universe
+      .map((u, idx): DerivativesMarket | null => {
+        const c = ctxs?.[idx];
+        if (!c || !u?.name) return null;
+        const base = u.name.toUpperCase();
+        const markPrice = Number(c.markPx) || Number(c.oraclePx) || 0;
+        const indexPrice = Number(c.oraclePx) || markPrice;
+        const prevDay = Number(c.prevDayPx) || markPrice;
+        if (markPrice <= 0) return null;
+        const volume24hUsd = Number(c.dayNtlVlm) || 0;
+        const oi = Number(c.openInterest) || 0;
+        const oiUsd = oi * markPrice;
+        const fundingRate = Number(c.funding) || 0;
+        const fundingRatePct = fundingRate * 100;
+        const premiumPct =
+          c.premium !== undefined && Number.isFinite(Number(c.premium))
+            ? Number(c.premium) * 100
+            : indexPrice > 0
+              ? ((markPrice - indexPrice) / indexPrice) * 100
+              : 0;
+        const change24hPct = prevDay > 0 ? ((markPrice - prevDay) / prevDay) * 100 : 0;
 
-  return setCached(
-    key,
-    { markets, source: 'Bybit V5 Linear Perpetual Public API', updatedAt: now },
-    20_000,
-  );
+        let observation = 'Balanced hourly funding and neutral perpetual basis.';
+        if (fundingRatePct >= 0.004) {
+          observation = 'Elevated positive funding indicates crowded long perpetual positioning.';
+        } else if (fundingRatePct <= -0.003) {
+          observation = 'Negative funding reflects short perpetual hedging or bearish skew.';
+        } else if (Math.abs(premiumPct) >= 0.12) {
+          observation =
+            premiumPct > 0
+              ? 'Perpetual trading at a notable premium over oracle spot index.'
+              : 'Perpetual trading at a discount relative to oracle spot index.';
+        }
+
+        return {
+          canonicalId: `bybit:perpetual:${base}/USDT`,
+          exchange: 'bybit' as const,
+          displaySymbol: `${base}/USDT`,
+          nativeSymbol: `${base}-PERP`,
+          lastPrice: markPrice,
+          markPrice,
+          indexPrice,
+          premiumPct,
+          fundingRate,
+          fundingRatePct,
+          nextFundingTime: nextHour,
+          openInterest: oi,
+          openInterestValueUsd: oiUsd,
+          volume24hUsd,
+          change24hPct,
+          longShortRatio: null,
+          buyRatio: null,
+          sellRatio: null,
+          observation,
+          timestamp: now,
+          source: 'Hyperliquid Public Perpetuals API (Fallback)',
+        };
+      })
+      .filter((m): m is DerivativesMarket => m !== null)
+      .filter((m) => coreSet.has(m.displaySymbol.split('/')[0]) || m.volume24hUsd >= 15_000_000)
+      .sort((a, b) => b.volume24hUsd - a.volume24hUsd)
+      .slice(0, 30);
+
+    return setCached(
+      key,
+      { markets: mapped, source: 'Hyperliquid Public Perpetuals API (Fallback)', updatedAt: now },
+      20_000,
+    );
+  }
 }
 
 export async function fetchDerivativesDetail(symbolBase = 'BTC'): Promise<{
@@ -1234,14 +1332,44 @@ export async function fetchDerivativesDetail(symbolBase = 'BTC'): Promise<{
           }))
       : [];
 
+  let source = 'Bybit V5 Linear Historical Derivatives API';
+  let finalFunding = fundingHistory;
+
+  if (finalFunding.length === 0) {
+    try {
+      const hlRes = await fetch('https://api.hyperliquid.xyz/info', {
+        method: 'POST',
+        signal: AbortSignal.timeout(8000),
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          type: 'fundingHistory',
+          coin: symbolBase.toUpperCase(),
+          startTime: Date.now() - 48 * 3_600_000,
+        }),
+      });
+      if (hlRes.ok) {
+        const rows = (await hlRes.json()) as { time: number; fundingRate: string }[];
+        if (Array.isArray(rows) && rows.length > 0) {
+          finalFunding = rows.slice(-48).map((r) => ({
+            timestamp: Number(r.time),
+            fundingRatePct: Number(r.fundingRate) * 100,
+          }));
+          source = 'Hyperliquid Public Funding History API (Fallback)';
+        }
+      }
+    } catch {
+      // keep empty honestly
+    }
+  }
+
   return setCached(
     key,
     {
       symbol: `${symbolBase.toUpperCase()}/USDT`,
-      fundingHistory,
+      fundingHistory: finalFunding,
       openInterestHistory,
       longShortHistory,
-      source: 'Bybit V5 Linear Historical Derivatives API',
+      source,
     },
     30_000,
   );

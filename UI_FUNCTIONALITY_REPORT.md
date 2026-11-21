@@ -63,3 +63,4 @@
 - **Unexpected Failed Network Requests (`>= 400`):** `0`
 - **React Error Boundary Activations:** `0`
 - **Screenshots:** Headless automated DOM & geometry assertions were executed directly against live `https://siglens.cc.cd`; static PNG screenshots were not committed to keep the repository lightweight.
+

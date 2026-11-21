@@ -82,6 +82,7 @@ import {
   ensureAuthTables,
   exchangeGoogleCodeAndCreateSession,
   getGoogleCallbackUrl,
+  getSessionUserFromReq,
   isGoogleOAuthConfigured,
   isSecureRequest,
   parseCookies,
@@ -944,16 +945,18 @@ export function buildApiRouter(): express.Router {
     }
   });
 
-  // --- Watchlists ---
-  router.get('/watchlists', (_req, res) => {
-    res.json({ items: getWatchlist() });
+  // --- Watchlists (automatically scoped per Google OAuth user when signed in) ---
+  router.get('/watchlists', (req, res) => {
+    const user = getSessionUserFromReq(req);
+    res.json({ items: getWatchlist(user?.id) });
   });
 
   router.put('/watchlists', rateLimit(60), (req, res) => {
     const schema = z.object({ items: z.array(z.string().min(5)).max(100) });
     const parsed = schema.safeParse(req.body);
     if (!parsed.success) return res.status(400).json({ error: 'Invalid watchlist array' });
-    const saved = saveWatchlist(parsed.data.items);
+    const user = getSessionUserFromReq(req);
+    const saved = saveWatchlist(parsed.data.items, user?.id);
     res.json({ items: saved });
   });
 
@@ -1045,9 +1048,10 @@ export function buildApiRouter(): express.Router {
     res.json({ ok: true });
   });
 
-  // --- Settings & Data Management ---
-  router.get('/settings', (_req, res) => {
-    res.json({ preferences: getStoredPreferences() });
+  // --- Settings & Data Management (scoped per Google OAuth user when signed in) ---
+  router.get('/settings', (req, res) => {
+    const user = getSessionUserFromReq(req);
+    res.json({ preferences: getStoredPreferences(user?.id) });
   });
 
   router.put('/settings', rateLimit(60), (req, res) => {
@@ -1055,14 +1059,15 @@ export function buildApiRouter(): express.Router {
     if (!parsed.success) {
       return res.status(400).json({ error: 'Invalid preferences payload' });
     }
-    const current = getStoredPreferences();
+    const user = getSessionUserFromReq(req);
+    const current = getStoredPreferences(user?.id);
     const next = {
       ...current,
       ...parsed.data,
       weights: { ...current.weights, ...(parsed.data.weights ?? {}) },
       thresholds: { ...current.thresholds, ...(parsed.data.thresholds ?? {}) },
     };
-    saveStoredPreferences(next);
+    saveStoredPreferences(next, user?.id);
     res.json({ preferences: next });
   });
 
@@ -1305,7 +1310,14 @@ export function buildApiRouter(): express.Router {
     res.json({ ok: true });
   });
 
-  router.post('/paper/tick', rateLimit(20), async (_req, res) => {
+  router.post('/paper/tick', rateLimit(20), async (req, res) => {
+    const cronSecret = process.env.CRON_SECRET?.trim();
+    if (cronSecret && !req.headers.origin) {
+      const provided = String(req.headers['x-cron-secret'] || req.query.secret || '').trim();
+      if (provided !== cronSecret) {
+        return res.status(401).json({ error: 'Missing or invalid X-Cron-Secret header.' });
+      }
+    }
     try {
       const result = await runAutonomousPaperCycle(true);
       const snapshot = await buildPaperArenaSnapshot(false);

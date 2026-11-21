@@ -45,3 +45,4 @@ Command: `tsx --test src/analytics/analytics.test.ts src/server/audit.regression
 - **Live Google OAuth Callback Completion (`/api/auth/google/callback`):** Could not complete real Google sign-in token exchange because `GOOGLE_CLIENT_ID` and `GOOGLE_CLIENT_SECRET` are not yet configured in Hostcry cPanel environment variables. Honest unconfigured guard (`configured: false`, HTTP `503`) was verified live.
 - **Live BYOK External LLM Calls (`/api/ai/test`, `/api/ai/analyze` with real paid keys):** Not executed against third-party paid LLM accounts; SSRF & URL validation layers were verified via automated unit tests.
 - **Destructive / High-Volume Load Testing Against Production:** Explicitly excluded per audit safety rules to avoid disrupting shared hosting (`720 MB` RAM / 1 vCPU).
+

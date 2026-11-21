@@ -35,8 +35,8 @@
 | 23 | `/api/market-overview` | GET | `buildApiRouter` | Public | `OverviewView`, `LandingPage` | **200 OK** | **Fixed:** Added Zod validation. |
 | 24 | `/api/correlation` | GET | `buildApiRouter` | Public | `HeatmapsView` | **200 OK** | **Fixed:** Added Zod validation (`lookback` 20–180). |
 | 25 | `/api/compare` | GET | `buildApiRouter` | Public | `api.compareAssets` | **200 OK** | **Fixed:** Added Zod validation. |
-| 26 | `/api/derivatives` | GET | `buildApiRouter` | Public | `api.getDerivatives` | **502** (Bybit CloudFront 403 on US host IP) | **Open (Hosting Geo-Block):** Returns honest `502` JSON error, zero mock data. |
-| 27 | `/api/derivatives/:base` | GET | `buildApiRouter` | Public | `api.getDerivativesDetail` | **502** (Bybit CloudFront 403 on US host IP) | **Open (Hosting Geo-Block):** Same as above. |
+| 26 | `/api/derivatives` | GET | `buildApiRouter` | Public | `api.getDerivatives` | **200 OK** (30 live perpetual markets via Hyperliquid fallback) | **Fixed (SIG-014):** Automatic fallback to Hyperliquid public perpetuals API when Bybit US IP returns 403. |
+| 27 | `/api/derivatives/:base` | GET | `buildApiRouter` | Public | `api.getDerivativesDetail` | **200 OK** (48 hourly funding points via Hyperliquid fallback) | **Fixed (SIG-014):** Automatic fallback to Hyperliquid public funding history API. |
 | 28 | `/api/defi` | GET | `buildApiRouter` | Public | `api.getDefi` | **200 OK** (DefiLlama TVL & protocols) | Working. |
 | 29 | `/api/watchlists` | GET | `buildApiRouter` | Public | `useAppStore` | **200 OK** | Working. |
 | 30 | `/api/watchlists` | PUT | `buildApiRouter` | Same-Origin | `useAppStore` | Verified in code/tests | Zod-validated + rate-limited + CSRF origin guard. |
@@ -57,7 +57,7 @@
 | 45 | `/api/paper/bots` | POST | `buildApiRouter` | Same-Origin | `PaperArenaView` | Verified in code/tests | Zod-validated + CSRF origin guard. |
 | 46 | `/api/paper/bots/:id` | PATCH | `buildApiRouter` | Same-Origin | `PaperArenaView` | Verified in code/tests | Zod-validated + CSRF origin guard. |
 | 47 | `/api/paper/bots/:id` | DELETE | `buildApiRouter` | Same-Origin | `PaperArenaView` | Verified in code/tests | CSRF origin guard added. |
-| 48 | `/api/paper/tick` | POST | `buildApiRouter` | Public/Cron | `PaperArenaView`, cPanel 5m Cron | Verified (`SIG-003` ATR fix deployed) | **Fixed (SIG-003):** Bot trailing ATR stop now reads `best.price`. |
+| 48 | `/api/paper/tick` | POST | `buildApiRouter` | `X-Cron-Secret` / Same-Origin | `PaperArenaView`, cPanel 5m Cron | **401** without secret / **200 OK** with `X-Cron-Secret` | **Fixed (`SIG-003` + `CRON_SECRET`):** Trailing ATR reads `best.price`; server-to-server calls require `CRON_SECRET`. |
 | 49 | `/api/paper/order` | POST | `buildApiRouter` | Same-Origin | `PaperArenaView` | Verified in code/tests | Zod-validated + CSRF origin guard. |
 | 50 | `/api/paper/positions/:id/close` | POST | `buildApiRouter` | Same-Origin | `PaperArenaView` | Verified in code/tests | CSRF origin guard added. |
 | 51 | `/api/paper/emergency-stop` | POST | `buildApiRouter` | Same-Origin | `PaperArenaView` | Verified in code/tests | CSRF origin guard added. |

@@ -242,12 +242,19 @@ function runMigrations(db: DatabaseSync): void {
   }
 }
 
-// --- Preferences ---
-export function getStoredPreferences(): UserPreferences {
+// --- Preferences (scoped per Google OAuth userId when signed in) ---
+export function getStoredPreferences(userId?: string | null): UserPreferences {
   const db = getDb();
-  const row = db
-    .prepare('SELECT value_json FROM user_preferences WHERE key = ?')
-    .get('main') as { value_json: string } | undefined;
+  const key = userId ? `user:${userId}` : 'main';
+  const row =
+    (db.prepare('SELECT value_json FROM user_preferences WHERE key = ?').get(key) as
+      | { value_json: string }
+      | undefined) ??
+    (userId
+      ? (db.prepare('SELECT value_json FROM user_preferences WHERE key = ?').get('main') as
+          | { value_json: string }
+          | undefined)
+      : undefined);
   if (!row) return { ...DEFAULT_PREFERENCES };
   try {
     const parsed = JSON.parse(row.value_json) as Partial<UserPreferences>;
@@ -262,27 +269,51 @@ export function getStoredPreferences(): UserPreferences {
   }
 }
 
-export function saveStoredPreferences(prefs: UserPreferences): UserPreferences {
+export function saveStoredPreferences(
+  prefs: UserPreferences,
+  userId?: string | null,
+): UserPreferences {
   const db = getDb();
+  const key = userId ? `user:${userId}` : 'main';
   db.prepare(
     `INSERT INTO user_preferences (key, value_json, updated_at) VALUES (?, ?, ?)
      ON CONFLICT(key) DO UPDATE SET value_json = excluded.value_json, updated_at = excluded.updated_at`,
-  ).run('main', JSON.stringify(prefs), Date.now());
+  ).run(key, JSON.stringify(prefs), Date.now());
   return prefs;
 }
 
-// --- Watchlist ---
-export function getWatchlist(): string[] {
+// --- Watchlist (scoped per Google OAuth userId when signed in) ---
+export function getWatchlist(userId?: string | null): string[] {
   const db = getDb();
+  if (userId) {
+    const row = db
+      .prepare('SELECT value_json FROM user_preferences WHERE key = ?')
+      .get(`watchlist:${userId}`) as { value_json: string } | undefined;
+    if (row) {
+      try {
+        const parsed = JSON.parse(row.value_json);
+        if (Array.isArray(parsed)) return parsed.map(String);
+      } catch {
+        // fallback to shared default watchlist
+      }
+    }
+  }
   const rows = db
     .prepare('SELECT canonical_id FROM watchlist_items ORDER BY position ASC')
     .all() as { canonical_id: string }[];
   return rows.map((r) => r.canonical_id);
 }
 
-export function saveWatchlist(items: string[]): string[] {
+export function saveWatchlist(items: string[], userId?: string | null): string[] {
   const db = getDb();
   const unique = Array.from(new Set(items));
+  if (userId) {
+    db.prepare(
+      `INSERT INTO user_preferences (key, value_json, updated_at) VALUES (?, ?, ?)
+       ON CONFLICT(key) DO UPDATE SET value_json = excluded.value_json, updated_at = excluded.updated_at`,
+    ).run(`watchlist:${userId}`, JSON.stringify(unique), Date.now());
+    return unique;
+  }
   db.exec('DELETE FROM watchlist_items');
   const insert = db.prepare(
     'INSERT INTO watchlist_items (canonical_id, position, added_at) VALUES (?, ?, ?)',

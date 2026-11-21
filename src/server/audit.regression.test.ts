@@ -295,6 +295,17 @@ test('API & Security: headers, JSON 404, malformed JSON 400, validation, SSRF, C
     const authJson = (await authRes.json()) as { configured: boolean; callbackUrl: string; user: unknown };
     assert.equal(typeof authJson.configured, 'boolean');
     assert.ok(authJson.callbackUrl.endsWith('/api/auth/google/callback'));
+
+    // 10. CRON_SECRET guard blocks unauthorized non-browser POST /api/paper/tick when configured
+    const prevCron = process.env.CRON_SECRET;
+    try {
+      process.env.CRON_SECRET = 'test-audit-cron-secret-123';
+      const unauthTick = await fetch(`${base}/api/paper/tick`, { method: 'POST' });
+      assert.equal(unauthTick.status, 401);
+    } finally {
+      if (prevCron === undefined) delete process.env.CRON_SECRET;
+      else process.env.CRON_SECRET = prevCron;
+    }
   } finally {
     await new Promise<void>((resolve) => server.close(() => resolve()));
   }
