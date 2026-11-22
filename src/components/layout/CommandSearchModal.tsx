@@ -14,7 +14,7 @@ const QUICK_PAGES: { section: NavSection; label: string; hint: string }[] = [
   { section: 'screener', label: 'Advanced Screener', hint: '20 executable presets & custom filters' },
   { section: 'heatmaps', label: 'Market Heatmaps', hint: 'Performance, correlation & breadth' },
   { section: 'arbitrage', label: 'Real-Time Arbitrage Scanner', hint: 'Cross-exchange spot spreads & Stat-Arb Z-scores' },
-  { section: 'arena', label: 'Autonomous Bot Arena', hint: 'Live paper-trading bots, equity curve & risk engine' },
+  { section: 'demo', label: 'Demo Trade Terminal', hint: 'Live charts, Market/Limit orders, 50x leverage & demo funds' },
   { section: 'ai', label: 'AI Insights', hint: 'Optional BYOK explainability & NL scan' },
   { section: 'settings', label: 'Settings & Diagnostics', hint: 'Weights, providers, alerts & BYOK' },
 ];

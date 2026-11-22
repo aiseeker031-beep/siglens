@@ -28,8 +28,8 @@ const ArbitrageView = lazy(() =>
 const AIResearchView = lazy(() =>
   import('./views/AIResearchView').then((m) => ({ default: m.AIResearchView })),
 );
-const PaperArenaView = lazy(() =>
-  import('./views/PaperArenaView').then((m) => ({ default: m.PaperArenaView })),
+const DemoTradeView = lazy(() =>
+  import('./views/DemoTradeView').then((m) => ({ default: m.DemoTradeView })),
 );
 const SettingsView = lazy(() =>
   import('./views/SettingsView').then((m) => ({ default: m.SettingsView })),
@@ -198,8 +198,8 @@ export function App() {
         return <HeatmapsView />;
       case 'arbitrage':
         return <ArbitrageView />;
-      case 'arena':
-        return <PaperArenaView />;
+      case 'demo':
+        return <DemoTradeView />;
       case 'ai':
         return <AIResearchView />;
       case 'settings':

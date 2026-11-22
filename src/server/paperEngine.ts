@@ -636,6 +636,7 @@ export async function openPaperOrder(input: {
   tp1?: number | null;
   tp2?: number | null;
   tp3?: number | null;
+  skipAutoSlTp?: boolean;
   trailingAtr?: number | null;
   botId?: string | null;
   botName?: string;
@@ -648,8 +649,9 @@ export async function openPaperOrder(input: {
   }
 
   const openList = listPositions('OPEN', 100);
-  if (openList.length >= acc.maxOpenPositions) {
-    throw new Error(`Maximum open positions limit (${acc.maxOpenPositions}) reached.`);
+  const maxPosLimit = Math.max(15, acc.maxOpenPositions);
+  if (openList.length >= maxPosLimit) {
+    throw new Error(`Maximum open positions limit (${maxPosLimit}) reached.`);
   }
 
   const marketType = input.marketType ?? defaultMarketTypeFor(input.exchange);
@@ -663,16 +665,16 @@ export async function openPaperOrder(input: {
   }
 
   const fillPrice = applySlippage(livePrice, input.side, true, acc.slippageBps);
-  const leverage = Math.max(1, Math.min(10, input.leverage ?? acc.defaultLeverage));
+  const leverage = Math.max(1, Math.min(50, input.leverage ?? acc.defaultLeverage));
 
-  // If SL/TP weren't explicitly provided on a manual order, derive from live deterministic signal engine
+  // If SL/TP weren't explicitly provided and caller didn't opt out, derive from live deterministic signal engine
   let stopLoss = input.stopLoss ?? null;
   let tp1 = input.tp1 ?? null;
   let tp2 = input.tp2 ?? null;
   let tp3 = input.tp3 ?? null;
   let trailingAtr = input.trailingAtr ?? null;
 
-  if (stopLoss === null && tp1 === null) {
+  if (!input.skipAutoSlTp && stopLoss === null && tp1 === null) {
     try {
       const { candles, freshness } = await fetchCandles(input.exchange, marketType, symbol, timeframe, 180);
       const prefs = getStoredPreferences();
@@ -722,9 +724,9 @@ export async function openPaperOrder(input: {
   const unrealized = openList.reduce((s, p) => s + p.unrealizedPnlUsd, 0);
   const equity = acc.cashBalanceUsd + marginUsed + unrealized;
 
-  const maxNotionalAllowed = acc.cashBalanceUsd * leverage * 0.92;
-  if (maxNotionalAllowed < 25) {
-    throw new Error('Insufficient available paper cash balance to open a new position.');
+  const maxNotionalAllowed = acc.cashBalanceUsd * leverage * 0.96;
+  if (maxNotionalAllowed < 10) {
+    throw new Error('Insufficient available demo balance to open a new position.');
   }
 
   let notionalUsd: number;
@@ -738,7 +740,7 @@ export async function openPaperOrder(input: {
     const riskBasedNotional = riskUsd / stopDistPct;
     // Cap per-position notional to 35% of leveraged equity or available margin
     const capNotional = Math.min(maxNotionalAllowed, equity * leverage * 0.35);
-    notionalUsd = Math.max(50, Math.min(riskBasedNotional, capNotional));
+    notionalUsd = Math.max(10, Math.min(riskBasedNotional, capNotional));
   }
 
   const marginUsd = notionalUsd / leverage;
@@ -752,7 +754,7 @@ export async function openPaperOrder(input: {
   const pos: PaperPosition = {
     id: `pos-${crypto.randomUUID().slice(0, 8)}`,
     botId: input.botId ?? null,
-    botName: input.botName ?? 'Manual Terminal',
+    botName: input.botName ?? 'Demo Trade',
     canonicalId,
     exchange: input.exchange,
     marketType,
@@ -909,8 +911,69 @@ export function resetPaperAccount(startingBalanceUsd = 10000): PaperAccountConfi
     INSERT INTO paper_equity_snapshots (timestamp, equity_usd, cash_usd, unrealized_pnl_usd, realized_pnl_usd, open_count)
     VALUES (?, ?, ?, 0, 0, 0)
   `).run(now, balance, balance);
-  appendBotLog(null, 'Account', 'INFO', `Paper account reset cleanly to $${balance.toLocaleString('en-US')}.`);
+  appendBotLog(null, 'Account', 'INFO', `Demo account reset cleanly to $${balance.toLocaleString('en-US')}.`);
   return next;
+}
+
+export function topUpPaperFunds(amountUsd = 10000): PaperAccountConfig {
+  ensurePaperSchema();
+  const delta = Math.max(100, Math.min(1_000_000, Number(amountUsd) || 10000));
+  const cur = getPaperAccount();
+  const next: PaperAccountConfig = {
+    ...cur,
+    startingBalanceUsd: cur.startingBalanceUsd + delta,
+    cashBalanceUsd: cur.cashBalanceUsd + delta,
+    dailyStartEquityUsd: cur.dailyStartEquityUsd + delta,
+    killSwitchTriggered: false,
+    killSwitchReason: null,
+  };
+  const saved = savePaperAccount(next);
+  recordEquitySnapshot(true);
+  appendBotLog(null, 'Demo Account', 'INFO', `Added +$${delta.toLocaleString('en-US')} demo funds.`);
+  return saved;
+}
+
+export function updatePaperPositionTpSl(
+  positionId: string,
+  patch: { stopLoss?: number | null; tp1?: number | null },
+): PaperPosition {
+  ensurePaperSchema();
+  const db = getDb();
+  const row = db
+    .prepare('SELECT * FROM paper_positions WHERE id = ?')
+    .get(positionId) as Record<string, unknown> | undefined;
+  if (!row) throw new Error('Position not found');
+  const pos = mapPositionRow(row);
+  if (pos.status !== 'OPEN') throw new Error('Cannot modify closed position');
+
+  if (patch.stopLoss !== undefined) {
+    if (patch.stopLoss !== null) {
+      if (pos.side === 'LONG' && patch.stopLoss >= pos.currentPrice) {
+        throw new Error('Stop loss for a LONG position must be below current market price.');
+      }
+      if (pos.side === 'SHORT' && patch.stopLoss <= pos.currentPrice) {
+        throw new Error('Stop loss for a SHORT position must be above current market price.');
+      }
+    }
+    pos.stopLoss = patch.stopLoss;
+    pos.initialStopLoss = patch.stopLoss;
+  }
+
+  if (patch.tp1 !== undefined) {
+    if (patch.tp1 !== null) {
+      if (pos.side === 'LONG' && patch.tp1 <= pos.currentPrice) {
+        throw new Error('Take profit for a LONG position must be above current market price.');
+      }
+      if (pos.side === 'SHORT' && patch.tp1 >= pos.currentPrice) {
+        throw new Error('Take profit for a SHORT position must be below current market price.');
+      }
+    }
+    pos.tp1 = patch.tp1;
+  }
+
+  savePosition(pos);
+  wsHub.broadcast({ type: 'paper:update', action: 'TPSL', positionId: pos.id, timestamp: Date.now() });
+  return pos;
 }
 
 /**

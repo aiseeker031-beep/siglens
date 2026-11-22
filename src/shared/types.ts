@@ -24,7 +24,7 @@ export type NavSection =
   | 'screener'
   | 'heatmaps'
   | 'arbitrage'
-  | 'arena'
+  | 'demo'
   | 'ai'
   | 'settings';
 

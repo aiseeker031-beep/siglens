@@ -4,7 +4,7 @@ import {
   ArrowLeftRight,
   BarChart3,
   Bell,
-  Bot,
+  CandlestickChart,
   ChevronLeft,
   ChevronRight,
   Filter,
@@ -44,7 +44,7 @@ const PRIMARY_NAV: {
   { id: 'screener', label: 'Screener', icon: Filter },
   { id: 'heatmaps', label: 'Heatmaps', icon: Grid2x2 },
   { id: 'arbitrage', label: 'Arbitrage', icon: ArrowLeftRight, badge: 'LIVE' },
-  { id: 'arena', label: 'Bot Arena', icon: Bot, badge: 'NEW' },
+  { id: 'demo', label: 'Demo Trade', icon: CandlestickChart, badge: 'DEMO' },
   { id: 'ai', label: 'AI Insights', icon: Sparkles },
 ];
 
@@ -55,7 +55,7 @@ const SECTION_TITLES: Record<NavSection, string> = {
   screener: 'Advanced Screener',
   heatmaps: 'Market Heatmaps',
   arbitrage: 'Real-Time Arbitrage Scanner',
-  arena: 'Autonomous Bot Arena',
+  demo: 'Demo Trading Terminal',
   ai: 'AI Research Insights',
   settings: 'Settings & Diagnostics',
 };

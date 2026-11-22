@@ -68,8 +68,10 @@ import {
   resetPaperAccount,
   runAutonomousPaperCycle,
   startAutonomousPaperLoop,
+  topUpPaperFunds,
   updatePaperAccountConfig,
   updatePaperBot,
+  updatePaperPositionTpSl,
 } from './src/server/paperEngine';
 import { wsHub } from './src/server/wsHub';
 import { scanLiveArbitrage } from './src/server/arbitrage';
@@ -1335,12 +1337,13 @@ export function buildApiRouter(): express.Router {
       timeframe: timeframeSchema.optional(),
       side: z.enum(['LONG', 'SHORT']),
       riskPct: z.number().min(0.25).max(10).optional(),
-      notionalUsd: z.number().min(25).max(1_000_000).optional(),
-      leverage: z.number().min(1).max(10).optional(),
+      notionalUsd: z.number().min(10).max(5_000_000).optional(),
+      leverage: z.number().min(1).max(50).optional(),
       stopLoss: z.number().positive().nullable().optional(),
       tp1: z.number().positive().nullable().optional(),
       tp2: z.number().positive().nullable().optional(),
       tp3: z.number().positive().nullable().optional(),
+      skipAutoSlTp: z.boolean().optional(),
       entryReason: z.string().max(240).optional(),
     });
     const parsed = schema.safeParse(req.body);
@@ -1351,6 +1354,22 @@ export function buildApiRouter(): express.Router {
       res.status(201).json({ position, snapshot });
     } catch (err) {
       res.status(400).json({ error: err instanceof Error ? err.message : 'Failed to open paper order' });
+    }
+  });
+
+  router.patch('/paper/positions/:id/tpsl', rateLimit(40), async (req, res) => {
+    const schema = z.object({
+      stopLoss: z.number().positive().nullable().optional(),
+      tp1: z.number().positive().nullable().optional(),
+    });
+    const parsed = schema.safeParse(req.body ?? {});
+    if (!parsed.success) return res.status(400).json({ error: 'Invalid TP/SL payload' });
+    try {
+      const position = updatePaperPositionTpSl(req.params.id, parsed.data);
+      const snapshot = await buildPaperArenaSnapshot(false);
+      res.json({ position, snapshot });
+    } catch (err) {
+      res.status(400).json({ error: err instanceof Error ? err.message : 'Failed to update TP/SL' });
     }
   });
 
@@ -1372,6 +1391,15 @@ export function buildApiRouter(): express.Router {
     } catch (err) {
       res.status(500).json({ error: err instanceof Error ? err.message : 'Emergency stop failed' });
     }
+  });
+
+  router.post('/paper/topup', rateLimit(15), async (req, res) => {
+    const schema = z.object({ amountUsd: z.number().min(100).max(1_000_000).default(10000) });
+    const parsed = schema.safeParse(req.body ?? {});
+    const amt = parsed.success ? parsed.data.amountUsd : 10000;
+    topUpPaperFunds(amt);
+    const snapshot = await buildPaperArenaSnapshot(false);
+    res.json({ snapshot });
   });
 
   router.post('/paper/reset', rateLimit(10), async (req, res) => {

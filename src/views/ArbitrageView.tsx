@@ -532,11 +532,11 @@ export const ArbitrageView: React.FC = () => {
                                     </button>
                                     <button
                                       type="button"
-                                      onClick={() => setActiveSection('arena')}
+                                      onClick={() => setActiveSection('demo')}
                                       className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-full sig-btn-primary text-xs font-semibold"
                                     >
                                       <Bot className="w-3.5 h-3.5 text-[#4ADE80]" />
-                                      Paper Bot Arena
+                                      Open Demo Trade
                                     </button>
                                   </div>
                                 </motion.div>

@@ -105,15 +105,15 @@ const WORKSPACE_MODULES: {
   },
   {
     num: '05',
-    section: 'arena',
-    title: 'Autonomous Bot Arena',
-    subtitle: '24/7 Paper Execution & Risk Engine',
+    section: 'demo',
+    title: 'Pro Demo Trade Terminal',
+    subtitle: 'Live Charts & Simulated Execution',
     description:
-      'Configure autonomous strategy bots with fee/slippage simulation, TP1 breakeven scaling, trailing ATR stops, and drawdown kill-switch.',
+      'Trade Crypto, US Stocks, and Global CFDs on full-width live candlestick charts with up to 50x leverage, Limit/Market orders, and live TP/SL lines.',
     icon: Bot,
     tone: 'light',
     span: 'lg:col-span-4',
-    tag: 'AUTO',
+    tag: 'DEMO',
   },
   {
     num: '06',
@@ -333,8 +333,8 @@ export const LandingPage: React.FC<{
             <a href="#arbitrage" className="hover:text-[#111814] transition-colors">
               Arbitrage &amp; Math
             </a>
-            <a href="#arena" className="hover:text-[#111814] transition-colors">
-              Bot Arena
+            <a href="#demo" className="hover:text-[#111814] transition-colors">
+              Demo Trade
             </a>
             <a href="#architecture" className="hover:text-[#111814] transition-colors">
               Architecture
@@ -984,9 +984,9 @@ export const LandingPage: React.FC<{
       </section>
 
       {/* =================================================================
-          SECTION 5: AUTONOMOUS PAPER-TRADING BOT & STRATEGY ARENA
+          SECTION 5: PRO DEMO TRADING TERMINAL
       ================================================================= */}
-      <section id="arena" className="py-16 sm:py-24 px-4 sm:px-6">
+      <section id="demo" className="py-16 sm:py-24 px-4 sm:px-6">
         <motion.div
           initial={{ opacity: 0, y: 18 }}
           whileInView={{ opacity: 1, y: 0 }}
@@ -999,22 +999,22 @@ export const LandingPage: React.FC<{
               <div className="max-w-2xl">
                 <div className="inline-flex items-center gap-2 text-[11px] font-bold uppercase tracking-[0.14em] text-[#4ADE80]">
                   <Bot className="w-4 h-4" />
-                  05 / Autonomous Strategy Arena
+                  05 / Pro Demo Trading Terminal
                 </div>
                 <h2 className="text-3xl sm:text-4xl font-black tracking-[-0.025em] text-white mt-2">
-                  Test live strategies autonomously — zero real capital at risk.
+                  Trade every live market on pro charts — zero real capital at risk.
                 </h2>
                 <p className="text-sm text-[#9DB2A5] mt-3 leading-relaxed">
-                  Deploy unlimited strategy bots across Crypto, US Stocks, and Global CFDs. Backed by server-side SQLite persistence and automated 5-minute cron execution ticks.
+                  Open Long and Short demo trades across Crypto, US Stocks, and Global CFDs with up to 50x leverage, Market &amp; Limit orders, live Entry/TP/SL chart lines, and persistent SQLite demo balance.
                 </p>
               </div>
 
               <button
                 type="button"
-                onClick={() => onLaunchApp('arena')}
+                onClick={() => onLaunchApp('demo')}
                 className="inline-flex items-center gap-2 px-6 py-3 rounded-full bg-[#22C55E] hover:bg-[#4ADE80] text-[#05140A] text-sm font-bold transition-colors shrink-0 self-start lg:self-auto"
               >
-                <span>Enter Bot Arena</span>
+                <span>Open Demo Trade</span>
                 <ArrowRight className="w-4 h-4" />
               </button>
             </div>
@@ -1182,10 +1182,10 @@ export const LandingPage: React.FC<{
               </button>
               <button
                 type="button"
-                onClick={() => onLaunchApp('arena')}
+                onClick={() => onLaunchApp('demo')}
                 className="hover:text-[#111814] font-medium"
               >
-                Bot Arena
+                Demo Trade
               </button>
               <button
                 type="button"

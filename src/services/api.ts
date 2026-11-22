@@ -377,12 +377,22 @@ export const api = {
     tp1?: number | null;
     tp2?: number | null;
     tp3?: number | null;
+    skipAutoSlTp?: boolean;
     entryReason?: string;
   }) =>
     apiJson<{ position: PaperPosition; snapshot: PaperArenaSnapshot }>('/api/paper/order', {
       method: 'POST',
       body: JSON.stringify(payload),
     }),
+
+  updatePaperPositionTpSl: (id: string, patch: { stopLoss?: number | null; tp1?: number | null }) =>
+    apiJson<{ position: PaperPosition; snapshot: PaperArenaSnapshot }>(
+      `/api/paper/positions/${encodeURIComponent(id)}/tpsl`,
+      {
+        method: 'PATCH',
+        body: JSON.stringify(patch),
+      },
+    ),
 
   closePaperPosition: (id: string) =>
     apiJson<{ position: PaperPosition; snapshot: PaperArenaSnapshot }>(
@@ -395,6 +405,12 @@ export const api = {
       summary: { closedCount: number; pausedBots: number };
       snapshot: PaperArenaSnapshot;
     }>('/api/paper/emergency-stop', { method: 'POST' }),
+
+  topUpPaperFunds: (amountUsd = 10000) =>
+    apiJson<{ snapshot: PaperArenaSnapshot }>('/api/paper/topup', {
+      method: 'POST',
+      body: JSON.stringify({ amountUsd }),
+    }),
 
   resetPaperAccount: (startingBalanceUsd = 10000) =>
     apiJson<{ snapshot: PaperArenaSnapshot }>('/api/paper/reset', {
