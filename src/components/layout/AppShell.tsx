@@ -18,7 +18,7 @@ import {
   Sparkles,
   X,
 } from 'lucide-react';
-import { EXCHANGE_LABELS, EXCHANGE_MARKET_TYPES } from '../../shared/constants';
+import { CRYPTO_EXCHANGES, EXCHANGE_LABELS, EXCHANGE_MARKET_TYPES } from '../../shared/constants';
 import { formatPercent, formatPrice, formatTimestamp } from '../../shared/format';
 import type { ExchangeId, MarketType, NavSection } from '../../shared/types';
 import { useAppStore } from '../../store/useAppStore';
@@ -485,7 +485,7 @@ export const AppShell: React.FC<{
                   onChange={(e) => setExchange(e.target.value as ExchangeId)}
                   className="px-3 py-1.5 rounded-full border border-[#E5EAE7] bg-white hover:border-[#C6D8C7] text-[11px] font-semibold text-[#111814] transition-colors focus:outline-none focus:border-[#16A34A]"
                 >
-                  {(['binance', 'bybit', 'kraken', 'coinbase'] as ExchangeId[]).map((ex) => (
+                  {CRYPTO_EXCHANGES.map((ex) => (
                     <option key={ex} value={ex}>
                       {EXCHANGE_LABELS[ex]}
                     </option>
@@ -493,7 +493,7 @@ export const AppShell: React.FC<{
                 </select>
               )}
 
-              {exchange === 'bybit' && (
+              {supportedMarketTypes.includes('spot') && supportedMarketTypes.includes('perpetual') && (
                 <select
                   aria-label="Select market type"
                   value={marketType}
@@ -501,9 +501,7 @@ export const AppShell: React.FC<{
                   className="px-3 py-1.5 rounded-full border border-[#E5EAE7] bg-white hover:border-[#C6D8C7] text-[11px] font-semibold text-[#111814] transition-colors focus:outline-none"
                 >
                   <option value="spot">Spot</option>
-                  <option value="perpetual" disabled={!supportedMarketTypes.includes('perpetual')}>
-                    Perp
-                  </option>
+                  <option value="perpetual">Perp</option>
                 </select>
               )}
             </div>

@@ -367,7 +367,7 @@ export const ArbitrageView: React.FC = () => {
                 Live Cross-Exchange Spot Arbitrage Matrix
               </h2>
               <p className="text-xs text-[#637369] mt-0.5">
-                Real-time ask-to-bid price discrepancies across Binance, Kraken & Coinbase spot orderbooks (auto-refreshes every 15s).
+                Real-time ask-to-bid price discrepancies across 11 global spot exchanges — Binance, Bybit, OKX, KuCoin, Gate.io, MEXC, Bitget, HTX, Crypto.com, Kraken &amp; Coinbase (auto-refreshes every 15s).
               </p>
             </div>
             <span className="text-[11px] font-mono font-semibold text-[#637369]">
@@ -716,7 +716,7 @@ export const ArbitrageView: React.FC = () => {
       <div className="flex items-center gap-2 text-[11px] text-[#637369] px-1">
         <Activity className="w-3.5 h-3.5 text-[#16A34A] shrink-0" />
         <span>
-          Arbitrage scanner evaluates live public exchange quotes and 1-hour cointegrated log-ratio Z-scores directly from Binance, Kraken, Coinbase, and Yahoo Finance. Transfer latency & withdrawal fees are excluded from spot fee estimates.
+          Arbitrage scanner evaluates live public exchange quotes and 1-hour cointegrated log-ratio Z-scores across Binance, Bybit, OKX, KuCoin, Gate.io, MEXC, Bitget, HTX, Crypto.com, Kraken, Coinbase, and Yahoo Finance. Transfer latency &amp; withdrawal fees are excluded from spot fee estimates.
         </span>
       </div>
     </div>

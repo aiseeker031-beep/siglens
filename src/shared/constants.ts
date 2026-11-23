@@ -47,6 +47,14 @@ export const TIMEFRAME_MS: Record<Timeframe, number> = {
 export const EXCHANGE_TIMEFRAMES: Record<ExchangeId, Timeframe[]> = {
   binance: ['1m', '3m', '5m', '15m', '30m', '1h', '2h', '4h', '6h', '12h', '1d', '1w'],
   bybit: ['1m', '3m', '5m', '15m', '30m', '1h', '2h', '4h', '6h', '12h', '1d', '1w'],
+  okx: ['1m', '3m', '5m', '15m', '30m', '1h', '2h', '4h', '6h', '12h', '1d', '1w'],
+  kucoin: ['1m', '3m', '5m', '15m', '30m', '1h', '2h', '4h', '6h', '12h', '1d', '1w'],
+  gateio: ['1m', '5m', '15m', '30m', '1h', '4h', '1d', '1w'],
+  mexc: ['1m', '5m', '15m', '30m', '1h', '4h', '1d', '1w'],
+  bitget: ['1m', '3m', '5m', '15m', '30m', '1h', '4h', '6h', '12h', '1d', '1w'],
+  htx: ['1m', '5m', '15m', '30m', '1h', '4h', '1d', '1w'],
+  cryptocom: ['1m', '5m', '15m', '30m', '1h', '4h', '6h', '12h', '1d', '1w'],
+  hyperliquid: ['1m', '3m', '5m', '15m', '30m', '1h', '2h', '4h', '12h', '1d', '1w'],
   kraken: ['1m', '5m', '15m', '30m', '1h', '4h', '1d', '1w'],
   coinbase: ['1m', '5m', '15m', '1h', '6h', '1d'],
   stocks: ['5m', '15m', '30m', '1h', '4h', '1d', '1w'],
@@ -56,6 +64,14 @@ export const EXCHANGE_TIMEFRAMES: Record<ExchangeId, Timeframe[]> = {
 export const EXCHANGE_MARKET_TYPES: Record<ExchangeId, MarketType[]> = {
   binance: ['spot'],
   bybit: ['spot', 'perpetual'],
+  okx: ['spot', 'perpetual'],
+  kucoin: ['spot'],
+  gateio: ['spot', 'perpetual'],
+  mexc: ['spot'],
+  bitget: ['spot', 'perpetual'],
+  htx: ['spot'],
+  cryptocom: ['spot'],
+  hyperliquid: ['perpetual'],
   kraken: ['spot'],
   coinbase: ['spot'],
   stocks: ['equity'],
@@ -65,13 +81,36 @@ export const EXCHANGE_MARKET_TYPES: Record<ExchangeId, MarketType[]> = {
 export const EXCHANGE_LABELS: Record<ExchangeId, string> = {
   binance: 'Binance',
   bybit: 'Bybit',
+  okx: 'OKX',
+  kucoin: 'KuCoin',
+  gateio: 'Gate.io',
+  mexc: 'MEXC',
+  bitget: 'Bitget',
+  htx: 'HTX',
+  cryptocom: 'Crypto.com',
+  hyperliquid: 'Hyperliquid',
   kraken: 'Kraken',
   coinbase: 'Coinbase',
   stocks: 'US Stocks',
   cfds: 'Global CFDs',
 };
 
-export const ALL_EXCHANGES: ExchangeId[] = ['binance', 'bybit', 'kraken', 'coinbase', 'stocks', 'cfds'];
+export const CRYPTO_EXCHANGES: ExchangeId[] = [
+  'binance',
+  'bybit',
+  'okx',
+  'kucoin',
+  'gateio',
+  'mexc',
+  'bitget',
+  'htx',
+  'cryptocom',
+  'hyperliquid',
+  'kraken',
+  'coinbase',
+];
+
+export const ALL_EXCHANGES: ExchangeId[] = [...CRYPTO_EXCHANGES, 'stocks', 'cfds'];
 
 export function defaultMarketTypeFor(exchange: ExchangeId): MarketType {
   return EXCHANGE_MARKET_TYPES[exchange][0];

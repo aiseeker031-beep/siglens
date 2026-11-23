@@ -1,4 +1,18 @@
-export type ExchangeId = 'binance' | 'bybit' | 'kraken' | 'coinbase' | 'stocks' | 'cfds';
+export type ExchangeId =
+  | 'binance'
+  | 'bybit'
+  | 'okx'
+  | 'kucoin'
+  | 'gateio'
+  | 'mexc'
+  | 'bitget'
+  | 'htx'
+  | 'cryptocom'
+  | 'hyperliquid'
+  | 'kraken'
+  | 'coinbase'
+  | 'stocks'
+  | 'cfds';
 export type MarketType = 'spot' | 'perpetual' | 'equity' | 'cfd';
 
 export type Timeframe =

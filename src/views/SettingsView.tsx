@@ -11,7 +11,7 @@ import {
   Upload,
 } from 'lucide-react';
 import { api } from '../services/api';
-import { DEFAULT_PREFERENCES, DEFAULT_WEIGHTS, QUICK_TIMEFRAMES } from '../shared/constants';
+import { ALL_EXCHANGES, DEFAULT_PREFERENCES, DEFAULT_WEIGHTS, EXCHANGE_LABELS, QUICK_TIMEFRAMES } from '../shared/constants';
 import { exportToCsv, formatTimestamp } from '../shared/format';
 import type {
   AIProviderProfile,
@@ -334,12 +334,11 @@ export const SettingsView: React.FC = () => {
               onChange={(e) => handleSavePref({ defaultExchange: e.target.value as ExchangeId })}
               className="w-full px-3 py-2 rounded-lg border border-[#E6E8EE] bg-[#F2F4F7]"
             >
-              <option value="binance">Binance</option>
-              <option value="bybit">Bybit</option>
-              <option value="kraken">Kraken</option>
-              <option value="coinbase">Coinbase</option>
-              <option value="stocks">US Stocks</option>
-              <option value="cfds">Global CFDs</option>
+              {ALL_EXCHANGES.map((ex) => (
+                <option key={ex} value={ex}>
+                  {EXCHANGE_LABELS[ex]}
+                </option>
+              ))}
             </select>
           </label>
 

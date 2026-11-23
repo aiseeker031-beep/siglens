@@ -10,7 +10,19 @@ import type {
 } from '../shared/types';
 import { fetchCandles, getMarketTickers } from './providers';
 
-const SPOT_VENUES: ExchangeId[] = ['binance', 'kraken', 'coinbase', 'bybit'];
+const SPOT_VENUES: ExchangeId[] = [
+  'binance',
+  'bybit',
+  'okx',
+  'kucoin',
+  'gateio',
+  'mexc',
+  'bitget',
+  'htx',
+  'cryptocom',
+  'kraken',
+  'coinbase',
+];
 
 const BASE_ASSET_ALIASES: Record<string, string> = {
   XBT: 'BTC',

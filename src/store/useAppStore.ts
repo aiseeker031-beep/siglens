@@ -123,7 +123,7 @@ export const useAppStore = create<AppState>((set, get) => ({
         nextSym = exchange === 'kraken' || exchange === 'coinbase' ? 'BTC/USD' : 'BTC/USDT';
       } else if ((exchange === 'kraken' || exchange === 'coinbase') && quote === 'USDT') {
         nextSym = `${base}/USD`;
-      } else if ((exchange === 'binance' || exchange === 'bybit') && quote === 'USD') {
+      } else if (exchange !== 'kraken' && exchange !== 'coinbase' && quote === 'USD') {
         nextSym = `${base}/USDT`;
       }
     }

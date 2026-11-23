@@ -65,6 +65,110 @@ const providerHealth: Record<ProviderStatus['id'], ProviderStatus> = {
     lastError: null,
     supportedMarkets: ['spot', 'perpetual'],
   },
+  okx: {
+    id: 'okx',
+    name: 'OKX V5 Public API',
+    status: 'DELAYED',
+    wsConnected: false,
+    lastRestSuccessAt: null,
+    lastWsMessageAt: null,
+    latencyMs: null,
+    requestCount: 0,
+    errorCount: 0,
+    lastError: null,
+    supportedMarkets: ['spot', 'perpetual'],
+  },
+  kucoin: {
+    id: 'kucoin',
+    name: 'KuCoin Public API',
+    status: 'DELAYED',
+    wsConnected: false,
+    lastRestSuccessAt: null,
+    lastWsMessageAt: null,
+    latencyMs: null,
+    requestCount: 0,
+    errorCount: 0,
+    lastError: null,
+    supportedMarkets: ['spot'],
+  },
+  gateio: {
+    id: 'gateio',
+    name: 'Gate.io V4 Public API',
+    status: 'DELAYED',
+    wsConnected: false,
+    lastRestSuccessAt: null,
+    lastWsMessageAt: null,
+    latencyMs: null,
+    requestCount: 0,
+    errorCount: 0,
+    lastError: null,
+    supportedMarkets: ['spot', 'perpetual'],
+  },
+  mexc: {
+    id: 'mexc',
+    name: 'MEXC V3 Public API',
+    status: 'DELAYED',
+    wsConnected: false,
+    lastRestSuccessAt: null,
+    lastWsMessageAt: null,
+    latencyMs: null,
+    requestCount: 0,
+    errorCount: 0,
+    lastError: null,
+    supportedMarkets: ['spot'],
+  },
+  bitget: {
+    id: 'bitget',
+    name: 'Bitget V2 Public API',
+    status: 'DELAYED',
+    wsConnected: false,
+    lastRestSuccessAt: null,
+    lastWsMessageAt: null,
+    latencyMs: null,
+    requestCount: 0,
+    errorCount: 0,
+    lastError: null,
+    supportedMarkets: ['spot', 'perpetual'],
+  },
+  htx: {
+    id: 'htx',
+    name: 'HTX (Huobi) Public API',
+    status: 'DELAYED',
+    wsConnected: false,
+    lastRestSuccessAt: null,
+    lastWsMessageAt: null,
+    latencyMs: null,
+    requestCount: 0,
+    errorCount: 0,
+    lastError: null,
+    supportedMarkets: ['spot'],
+  },
+  cryptocom: {
+    id: 'cryptocom',
+    name: 'Crypto.com Exchange Public API',
+    status: 'DELAYED',
+    wsConnected: false,
+    lastRestSuccessAt: null,
+    lastWsMessageAt: null,
+    latencyMs: null,
+    requestCount: 0,
+    errorCount: 0,
+    lastError: null,
+    supportedMarkets: ['spot'],
+  },
+  hyperliquid: {
+    id: 'hyperliquid',
+    name: 'Hyperliquid Perpetuals API',
+    status: 'DELAYED',
+    wsConnected: false,
+    lastRestSuccessAt: null,
+    lastWsMessageAt: null,
+    latencyMs: null,
+    requestCount: 0,
+    errorCount: 0,
+    lastError: null,
+    supportedMarkets: ['perpetual'],
+  },
   kraken: {
     id: 'kraken',
     name: 'Kraken Public API',
@@ -234,12 +338,16 @@ export function toNativeSymbol(exchange: ExchangeId, base: string, quote: string
     return found ? found.nativeSymbol : `${b}${q}=X`;
   }
   if (exchange === 'coinbase') return `${b}-${q === 'USDT' ? 'USD' : q}`;
+  if (exchange === 'okx' || exchange === 'kucoin') return `${b}-${q === 'USD' ? 'USDT' : q}`;
+  if (exchange === 'gateio' || exchange === 'cryptocom') return `${b}_${q === 'USD' ? 'USDT' : q}`;
+  if (exchange === 'htx') return `${b}${q === 'USD' ? 'USDT' : q}`.toLowerCase();
+  if (exchange === 'hyperliquid') return b;
   if (exchange === 'kraken') {
     const kb = b === 'BTC' ? 'XBT' : b;
     const kq = q === 'USDT' ? 'USD' : q;
     return `${kb}${kq}`;
   }
-  return `${b}${q}`;
+  return `${b}${q === 'USD' ? 'USDT' : q}`;
 }
 
 // =========================================================================
@@ -645,6 +753,469 @@ async function fetchTraditionalUniverseTickers(
   return setCached(key, tickers, 45_000);
 }
 
+async function fetchOkxTickers(marketType: MarketType = 'spot'): Promise<MarketTicker[]> {
+  const isPerp = marketType === 'perpetual';
+  const instType = isPerp ? 'SWAP' : 'SPOT';
+  const key = `tickers:okx:${marketType}`;
+  const cached = getCached<MarketTicker[]>(key);
+  if (cached) return cached;
+
+  const res = await fetchJsonWithMetrics<{ data?: Record<string, string>[] }>(
+    'okx',
+    `https://www.okx.com/api/v5/market/tickers?instType=${instType}`,
+    9000,
+  );
+  const now = Date.now();
+  const coreSet = new Set(CORE_UNIVERSE_BASES);
+  const tickers: MarketTicker[] = [];
+
+  for (const item of res.data ?? []) {
+    const instId = String(item.instId || '');
+    const parts = instId.split('-');
+    if (isPerp) {
+      if (parts.length !== 3 || parts[1] !== 'USDT' || parts[2] !== 'SWAP') continue;
+    } else {
+      if (parts.length !== 2 || parts[1] !== 'USDT') continue;
+    }
+    const base = parts[0].toUpperCase();
+    const quote = 'USDT';
+    const lastPrice = Number(item.last);
+    if (!Number.isFinite(lastPrice) || lastPrice <= 0) continue;
+    const open24h = Number(item.open24h) || lastPrice;
+    const bid = Number(item.bidPx) || null;
+    const ask = Number(item.askPx) || null;
+    const spreadPct = bid && ask && bid > 0 ? ((ask - bid) / bid) * 100 : null;
+    const quoteVol = Number(item.volCcy24h) || Number(item.vol24h) * lastPrice || 0;
+    if (!coreSet.has(base) && quoteVol < 3_000_000) continue;
+    const displaySymbol = `${base}/${quote}`;
+    tickers.push({
+      canonicalId: `okx:${marketType}:${displaySymbol}`,
+      exchange: 'okx',
+      marketType,
+      baseAsset: base,
+      quoteAsset: quote,
+      displaySymbol,
+      nativeSymbol: instId,
+      lastPrice,
+      bid,
+      ask,
+      spreadPct,
+      change24h: lastPrice - open24h,
+      change24hPct: open24h > 0 ? ((lastPrice - open24h) / open24h) * 100 : 0,
+      high24h: Number(item.high24h) || lastPrice,
+      low24h: Number(item.low24h) || lastPrice,
+      baseVolume24h: Number(item.vol24h) || 0,
+      quoteVolume24h: quoteVol,
+      timestamp: Number(item.ts) || now,
+      freshness: 'LIVE',
+      source: `OKX V5 Public API (${instType})`,
+    });
+  }
+
+  tickers.sort((a, b) => b.quoteVolume24h - a.quoteVolume24h);
+  return setCached(key, tickers.slice(0, 80), 20_000);
+}
+
+async function fetchKucoinTickers(): Promise<MarketTicker[]> {
+  const key = 'tickers:kucoin:spot';
+  const cached = getCached<MarketTicker[]>(key);
+  if (cached) return cached;
+
+  const res = await fetchJsonWithMetrics<{ data?: { time?: number; ticker?: Record<string, string>[] } }>(
+    'kucoin',
+    'https://api.kucoin.com/api/v1/market/allTickers',
+    9000,
+  );
+  const now = res.data?.time || Date.now();
+  const coreSet = new Set(CORE_UNIVERSE_BASES);
+  const tickers: MarketTicker[] = [];
+
+  for (const item of res.data?.ticker ?? []) {
+    const sym = String(item.symbol || '');
+    if (!sym.endsWith('-USDT')) continue;
+    const base = sym.slice(0, -5).toUpperCase();
+    const lastPrice = Number(item.last);
+    if (!Number.isFinite(lastPrice) || lastPrice <= 0) continue;
+    const quoteVol = Number(item.volValue) || 0;
+    if (!coreSet.has(base) && quoteVol < 2_000_000) continue;
+    const bid = Number(item.buy) || null;
+    const ask = Number(item.sell) || null;
+    const spreadPct = bid && ask && bid > 0 ? ((ask - bid) / bid) * 100 : null;
+    const displaySymbol = `${base}/USDT`;
+    tickers.push({
+      canonicalId: `kucoin:spot:${displaySymbol}`,
+      exchange: 'kucoin',
+      marketType: 'spot',
+      baseAsset: base,
+      quoteAsset: 'USDT',
+      displaySymbol,
+      nativeSymbol: sym,
+      lastPrice,
+      bid,
+      ask,
+      spreadPct,
+      change24h: Number(item.changePrice) || 0,
+      change24hPct: (Number(item.changeRate) || 0) * 100,
+      high24h: Number(item.high) || lastPrice,
+      low24h: Number(item.low) || lastPrice,
+      baseVolume24h: Number(item.vol) || 0,
+      quoteVolume24h: quoteVol,
+      timestamp: now,
+      freshness: 'LIVE',
+      source: 'KuCoin Public API',
+    });
+  }
+
+  tickers.sort((a, b) => b.quoteVolume24h - a.quoteVolume24h);
+  return setCached(key, tickers.slice(0, 80), 20_000);
+}
+
+async function fetchGateioTickers(marketType: MarketType = 'spot'): Promise<MarketTicker[]> {
+  const isPerp = marketType === 'perpetual';
+  const key = `tickers:gateio:${marketType}`;
+  const cached = getCached<MarketTicker[]>(key);
+  if (cached) return cached;
+
+  const url = isPerp
+    ? 'https://api.gateio.ws/api/v4/futures/usdt/tickers'
+    : 'https://api.gateio.ws/api/v4/spot/tickers';
+  const list = await fetchJsonWithMetrics<Record<string, string>[]>('gateio', url, 9000);
+  const now = Date.now();
+  const coreSet = new Set(CORE_UNIVERSE_BASES);
+  const tickers: MarketTicker[] = [];
+
+  for (const item of list ?? []) {
+    const rawSym = String(isPerp ? item.contract : item.currency_pair || '');
+    if (!rawSym.endsWith('_USDT')) continue;
+    const base = rawSym.slice(0, -5).toUpperCase();
+    const lastPrice = Number(item.last);
+    if (!Number.isFinite(lastPrice) || lastPrice <= 0) continue;
+    const quoteVol = Number(isPerp ? item.volume_24h_quote : item.quote_volume) || 0;
+    if (!coreSet.has(base) && quoteVol < 2_500_000) continue;
+    const bid = Number(item.highest_bid) || null;
+    const ask = Number(item.lowest_ask) || null;
+    const spreadPct = bid && ask && bid > 0 ? ((ask - bid) / bid) * 100 : null;
+    const changePct = Number(item.change_percentage) || 0;
+    const displaySymbol = `${base}/USDT`;
+    tickers.push({
+      canonicalId: `gateio:${marketType}:${displaySymbol}`,
+      exchange: 'gateio',
+      marketType,
+      baseAsset: base,
+      quoteAsset: 'USDT',
+      displaySymbol,
+      nativeSymbol: rawSym,
+      lastPrice,
+      bid,
+      ask,
+      spreadPct,
+      change24h: lastPrice * (changePct / 100),
+      change24hPct: changePct,
+      high24h: Number(item.high_24h) || lastPrice,
+      low24h: Number(item.low_24h) || lastPrice,
+      baseVolume24h: Number(isPerp ? item.volume_24h_base : item.base_volume) || 0,
+      quoteVolume24h: quoteVol,
+      timestamp: now,
+      freshness: 'LIVE',
+      source: `Gate.io V4 Public API (${isPerp ? 'Perp' : 'Spot'})`,
+    });
+  }
+
+  tickers.sort((a, b) => b.quoteVolume24h - a.quoteVolume24h);
+  return setCached(key, tickers.slice(0, 80), 20_000);
+}
+
+async function fetchMexcTickers(): Promise<MarketTicker[]> {
+  const key = 'tickers:mexc:spot';
+  const cached = getCached<MarketTicker[]>(key);
+  if (cached) return cached;
+
+  const list = await fetchJsonWithMetrics<Record<string, string>[]>(
+    'mexc',
+    'https://api.mexc.com/api/v3/ticker/24hr',
+    9000,
+  );
+  const now = Date.now();
+  const coreSet = new Set(CORE_UNIVERSE_BASES);
+  const tickers: MarketTicker[] = [];
+
+  for (const item of list ?? []) {
+    const sym = String(item.symbol || '');
+    if (!sym.endsWith('USDT')) continue;
+    const base = sym.slice(0, -4).toUpperCase();
+    const lastPrice = Number(item.lastPrice);
+    if (!Number.isFinite(lastPrice) || lastPrice <= 0) continue;
+    const quoteVol = Number(item.quoteVolume) || 0;
+    if (!coreSet.has(base) && quoteVol < 3_000_000) continue;
+    const bid = Number(item.bidPrice) || null;
+    const ask = Number(item.askPrice) || null;
+    const spreadPct = bid && ask && bid > 0 ? ((ask - bid) / bid) * 100 : null;
+    const displaySymbol = `${base}/USDT`;
+    tickers.push({
+      canonicalId: `mexc:spot:${displaySymbol}`,
+      exchange: 'mexc',
+      marketType: 'spot',
+      baseAsset: base,
+      quoteAsset: 'USDT',
+      displaySymbol,
+      nativeSymbol: sym,
+      lastPrice,
+      bid,
+      ask,
+      spreadPct,
+      change24h: Number(item.priceChange) || 0,
+      change24hPct: Number(item.priceChangePercent) * (Math.abs(Number(item.priceChangePercent)) <= 1 ? 100 : 1) || 0,
+      high24h: Number(item.highPrice) || lastPrice,
+      low24h: Number(item.lowPrice) || lastPrice,
+      baseVolume24h: Number(item.volume) || 0,
+      quoteVolume24h: quoteVol,
+      timestamp: now,
+      freshness: 'LIVE',
+      source: 'MEXC V3 Public API',
+    });
+  }
+
+  tickers.sort((a, b) => b.quoteVolume24h - a.quoteVolume24h);
+  return setCached(key, tickers.slice(0, 80), 20_000);
+}
+
+async function fetchBitgetTickers(marketType: MarketType = 'spot'): Promise<MarketTicker[]> {
+  const isPerp = marketType === 'perpetual';
+  const key = `tickers:bitget:${marketType}`;
+  const cached = getCached<MarketTicker[]>(key);
+  if (cached) return cached;
+
+  const url = isPerp
+    ? 'https://api.bitget.com/api/v2/mix/market/tickers?productType=USDT-FUTURES'
+    : 'https://api.bitget.com/api/v2/spot/market/tickers';
+  const res = await fetchJsonWithMetrics<{ data?: Record<string, string>[] }>('bitget', url, 9000);
+  const now = Date.now();
+  const coreSet = new Set(CORE_UNIVERSE_BASES);
+  const tickers: MarketTicker[] = [];
+
+  for (const item of res.data ?? []) {
+    const sym = String(item.symbol || '');
+    if (!sym.endsWith('USDT')) continue;
+    const base = sym.slice(0, -4).toUpperCase();
+    const lastPrice = Number(item.lastPr);
+    if (!Number.isFinite(lastPrice) || lastPrice <= 0) continue;
+    const quoteVol = Number(item.usdtVolume || item.quoteVolume) || 0;
+    if (!coreSet.has(base) && quoteVol < 3_000_000) continue;
+    const bid = Number(item.bidPr) || null;
+    const ask = Number(item.askPr) || null;
+    const spreadPct = bid && ask && bid > 0 ? ((ask - bid) / bid) * 100 : null;
+    const changePct = (Number(item.change24h) || 0) * 100;
+    const displaySymbol = `${base}/USDT`;
+    tickers.push({
+      canonicalId: `bitget:${marketType}:${displaySymbol}`,
+      exchange: 'bitget',
+      marketType,
+      baseAsset: base,
+      quoteAsset: 'USDT',
+      displaySymbol,
+      nativeSymbol: sym,
+      lastPrice,
+      bid,
+      ask,
+      spreadPct,
+      change24h: lastPrice * (changePct / 100),
+      change24hPct: changePct,
+      high24h: Number(item.high24h) || lastPrice,
+      low24h: Number(item.low24h) || lastPrice,
+      baseVolume24h: Number(item.baseVolume) || 0,
+      quoteVolume24h: quoteVol,
+      timestamp: Number(item.ts) || now,
+      freshness: 'LIVE',
+      source: `Bitget V2 Public API (${isPerp ? 'Perp' : 'Spot'})`,
+    });
+  }
+
+  tickers.sort((a, b) => b.quoteVolume24h - a.quoteVolume24h);
+  return setCached(key, tickers.slice(0, 80), 20_000);
+}
+
+async function fetchHtxTickers(): Promise<MarketTicker[]> {
+  const key = 'tickers:htx:spot';
+  const cached = getCached<MarketTicker[]>(key);
+  if (cached) return cached;
+
+  const res = await fetchJsonWithMetrics<{ data?: Record<string, unknown>[] }>(
+    'htx',
+    'https://api.huobi.pro/market/tickers',
+    9000,
+  );
+  const now = Date.now();
+  const coreSet = new Set(CORE_UNIVERSE_BASES);
+  const tickers: MarketTicker[] = [];
+
+  for (const item of res.data ?? []) {
+    const sym = String(item.symbol || '').toLowerCase();
+    if (!sym.endsWith('usdt')) continue;
+    const base = sym.slice(0, -4).toUpperCase();
+    const lastPrice = Number(item.close);
+    if (!Number.isFinite(lastPrice) || lastPrice <= 0) continue;
+    const quoteVol = Number(item.vol) || 0;
+    if (!coreSet.has(base) && quoteVol < 2_500_000) continue;
+    const open = Number(item.open) || lastPrice;
+    const bid = Number(item.bid) || null;
+    const ask = Number(item.ask) || null;
+    const spreadPct = bid && ask && bid > 0 ? ((ask - bid) / bid) * 100 : null;
+    const displaySymbol = `${base}/USDT`;
+    tickers.push({
+      canonicalId: `htx:spot:${displaySymbol}`,
+      exchange: 'htx',
+      marketType: 'spot',
+      baseAsset: base,
+      quoteAsset: 'USDT',
+      displaySymbol,
+      nativeSymbol: sym,
+      lastPrice,
+      bid,
+      ask,
+      spreadPct,
+      change24h: lastPrice - open,
+      change24hPct: open > 0 ? ((lastPrice - open) / open) * 100 : 0,
+      high24h: Number(item.high) || lastPrice,
+      low24h: Number(item.low) || lastPrice,
+      baseVolume24h: Number(item.amount) || 0,
+      quoteVolume24h: quoteVol,
+      timestamp: now,
+      freshness: 'LIVE',
+      source: 'HTX (Huobi) Public API',
+    });
+  }
+
+  tickers.sort((a, b) => b.quoteVolume24h - a.quoteVolume24h);
+  return setCached(key, tickers.slice(0, 70), 20_000);
+}
+
+async function fetchCryptocomTickers(): Promise<MarketTicker[]> {
+  const key = 'tickers:cryptocom:spot';
+  const cached = getCached<MarketTicker[]>(key);
+  if (cached) return cached;
+
+  const res = await fetchJsonWithMetrics<{ result?: { data?: Record<string, string>[] } }>(
+    'cryptocom',
+    'https://api.crypto.com/exchange/v1/public/get-tickers',
+    9000,
+  );
+  const now = Date.now();
+  const coreSet = new Set(CORE_UNIVERSE_BASES);
+  const tickers: MarketTicker[] = [];
+
+  for (const item of res.result?.data ?? []) {
+    const inst = String(item.i || '');
+    if (!inst.endsWith('_USDT')) continue;
+    const base = inst.slice(0, -5).toUpperCase();
+    const lastPrice = Number(item.a);
+    if (!Number.isFinite(lastPrice) || lastPrice <= 0) continue;
+    const quoteVol = Number(item.vv) || Number(item.v) * lastPrice || 0;
+    if (!coreSet.has(base) && quoteVol < 1_000_000) continue;
+    const bid = Number(item.b) || null;
+    const ask = Number(item.k) || null;
+    const spreadPct = bid && ask && bid > 0 ? ((ask - bid) / bid) * 100 : null;
+    const changePct = (Number(item.c) || 0) * 100;
+    const displaySymbol = `${base}/USDT`;
+    tickers.push({
+      canonicalId: `cryptocom:spot:${displaySymbol}`,
+      exchange: 'cryptocom',
+      marketType: 'spot',
+      baseAsset: base,
+      quoteAsset: 'USDT',
+      displaySymbol,
+      nativeSymbol: inst,
+      lastPrice,
+      bid,
+      ask,
+      spreadPct,
+      change24h: lastPrice * (changePct / 100),
+      change24hPct: changePct,
+      high24h: Number(item.h) || lastPrice,
+      low24h: Number(item.l) || lastPrice,
+      baseVolume24h: Number(item.v) || 0,
+      quoteVolume24h: quoteVol,
+      timestamp: Number(item.t) || now,
+      freshness: 'LIVE',
+      source: 'Crypto.com Exchange Public API',
+    });
+  }
+
+  tickers.sort((a, b) => b.quoteVolume24h - a.quoteVolume24h);
+  return setCached(key, tickers.slice(0, 70), 20_000);
+}
+
+async function fetchHyperliquidTickers(): Promise<MarketTicker[]> {
+  const key = 'tickers:hyperliquid:perpetual';
+  const cached = getCached<MarketTicker[]>(key);
+  if (cached) return cached;
+
+  const t0 = Date.now();
+  const stat = providerHealth.hyperliquid;
+  stat.requestCount += 1;
+  try {
+    const res = await fetch('https://api.hyperliquid.xyz/info', {
+      method: 'POST',
+      signal: AbortSignal.timeout(9000),
+      headers: { 'Content-Type': 'application/json', 'User-Agent': 'SIGLENS/1.0' },
+      body: JSON.stringify({ type: 'metaAndAssetCtxs' }),
+    });
+    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+    const [meta, ctxs] = (await res.json()) as [
+      { universe?: { name: string }[] },
+      { markPx?: string; oraclePx?: string; prevDayPx?: string; dayNtlVlm?: string }[],
+    ];
+    stat.latencyMs = Date.now() - t0;
+    stat.lastRestSuccessAt = Date.now();
+    stat.status = 'LIVE';
+    stat.lastError = null;
+
+    const now = Date.now();
+    const coreSet = new Set(CORE_UNIVERSE_BASES);
+    const tickers: MarketTicker[] = [];
+    (meta?.universe ?? []).forEach((u, idx) => {
+      const c = ctxs?.[idx];
+      if (!c || !u?.name) return;
+      const base = u.name.toUpperCase();
+      const lastPrice = Number(c.markPx) || Number(c.oraclePx) || 0;
+      if (!Number.isFinite(lastPrice) || lastPrice <= 0) return;
+      const quoteVol = Number(c.dayNtlVlm) || 0;
+      if (!coreSet.has(base) && quoteVol < 2_000_000) return;
+      const prevDay = Number(c.prevDayPx) || lastPrice;
+      const displaySymbol = `${base}/USDT`;
+      tickers.push({
+        canonicalId: `hyperliquid:perpetual:${displaySymbol}`,
+        exchange: 'hyperliquid',
+        marketType: 'perpetual',
+        baseAsset: base,
+        quoteAsset: 'USDT',
+        displaySymbol,
+        nativeSymbol: base,
+        lastPrice,
+        bid: null,
+        ask: null,
+        spreadPct: null,
+        change24h: lastPrice - prevDay,
+        change24hPct: prevDay > 0 ? ((lastPrice - prevDay) / prevDay) * 100 : 0,
+        high24h: Math.max(lastPrice, prevDay),
+        low24h: Math.min(lastPrice, prevDay),
+        baseVolume24h: lastPrice > 0 ? quoteVol / lastPrice : 0,
+        quoteVolume24h: quoteVol,
+        timestamp: now,
+        freshness: 'LIVE',
+        source: 'Hyperliquid Public Perpetuals API',
+      });
+    });
+
+    tickers.sort((a, b) => b.quoteVolume24h - a.quoteVolume24h);
+    return setCached(key, tickers.slice(0, 70), 20_000);
+  } catch (err) {
+    stat.errorCount += 1;
+    stat.lastError = err instanceof Error ? err.message : String(err);
+    stat.status = 'DELAYED';
+    throw err;
+  }
+}
+
 export async function getMarketTickers(
   exchange: ExchangeId | 'all' = 'binance',
   marketType: MarketType | 'all' = 'spot',
@@ -654,11 +1225,22 @@ export async function getMarketTickers(
     if (marketType === 'all' || marketType === 'spot') {
       tasks.push(fetchBinanceSpotTickers().catch(() => []));
       tasks.push(fetchBybitTickers('spot').catch(() => []));
+      tasks.push(fetchOkxTickers('spot').catch(() => []));
+      tasks.push(fetchKucoinTickers().catch(() => []));
+      tasks.push(fetchGateioTickers('spot').catch(() => []));
+      tasks.push(fetchMexcTickers().catch(() => []));
+      tasks.push(fetchBitgetTickers('spot').catch(() => []));
+      tasks.push(fetchHtxTickers().catch(() => []));
+      tasks.push(fetchCryptocomTickers().catch(() => []));
       tasks.push(fetchKrakenTickers().catch(() => []));
       tasks.push(fetchCoinbaseTickers().catch(() => []));
     }
     if (marketType === 'all' || marketType === 'perpetual') {
       tasks.push(fetchBybitTickers('perpetual').catch(() => []));
+      tasks.push(fetchOkxTickers('perpetual').catch(() => []));
+      tasks.push(fetchGateioTickers('perpetual').catch(() => []));
+      tasks.push(fetchBitgetTickers('perpetual').catch(() => []));
+      tasks.push(fetchHyperliquidTickers().catch(() => []));
     }
     if (marketType === 'all' || marketType === 'equity') {
       tasks.push(fetchTraditionalUniverseTickers('stocks', 'equity', STOCK_UNIVERSE).catch(() => []));
@@ -672,6 +1254,14 @@ export async function getMarketTickers(
 
   if (exchange === 'binance') return fetchBinanceSpotTickers();
   if (exchange === 'bybit') return fetchBybitTickers(marketType === 'perpetual' ? 'perpetual' : 'spot');
+  if (exchange === 'okx') return fetchOkxTickers(marketType === 'perpetual' ? 'perpetual' : 'spot');
+  if (exchange === 'kucoin') return fetchKucoinTickers();
+  if (exchange === 'gateio') return fetchGateioTickers(marketType === 'perpetual' ? 'perpetual' : 'spot');
+  if (exchange === 'mexc') return fetchMexcTickers();
+  if (exchange === 'bitget') return fetchBitgetTickers(marketType === 'perpetual' ? 'perpetual' : 'spot');
+  if (exchange === 'htx') return fetchHtxTickers();
+  if (exchange === 'cryptocom') return fetchCryptocomTickers();
+  if (exchange === 'hyperliquid') return fetchHyperliquidTickers();
   if (exchange === 'kraken') return fetchKrakenTickers();
   if (exchange === 'stocks') return fetchTraditionalUniverseTickers('stocks', 'equity', STOCK_UNIVERSE);
   if (exchange === 'cfds') return fetchTraditionalUniverseTickers('cfds', 'cfd', CFD_UNIVERSE);
@@ -788,6 +1378,259 @@ export async function fetchCandles(
         };
       });
       source = `Bybit V5 Klines (${cat})`;
+    } else if (exchange === 'okx') {
+      const okxBarMap: Record<Timeframe, string> = {
+        '1m': '1m', '3m': '3m', '5m': '5m', '15m': '15m', '30m': '30m',
+        '1h': '1H', '2h': '2H', '4h': '4H', '6h': '6H', '12h': '12H', '1d': '1D', '1w': '1W',
+      };
+      const instId = marketType === 'perpetual' ? `${native}-SWAP` : native;
+      const bar = okxBarMap[timeframe] || '1H';
+      const res = await fetchJsonWithMetrics<{ data?: string[][] }>(
+        'okx',
+        `https://www.okx.com/api/v5/market/candles?instId=${encodeURIComponent(instId)}&bar=${bar}&limit=${Math.min(limit, 300)}`,
+        8000,
+      );
+      candles = (res.data ?? [])
+        .slice()
+        .reverse()
+        .map((k) => {
+          const openTime = Number(k[0]);
+          const closeTime = openTime + intervalMs - 1;
+          return {
+            openTime,
+            closeTime,
+            open: Number(k[1]),
+            high: Number(k[2]),
+            low: Number(k[3]),
+            close: Number(k[4]),
+            volume: Number(k[5]),
+            quoteVolume: Number(k[7]) || Number(k[6]),
+            isClosed: k[8] === '1' || closeTime < now,
+          };
+        });
+      source = `OKX V5 Candles (${marketType})`;
+    } else if (exchange === 'kucoin') {
+      const kuMap: Record<Timeframe, string> = {
+        '1m': '1min', '3m': '3min', '5m': '5min', '15m': '15min', '30m': '30min',
+        '1h': '1hour', '2h': '2hour', '4h': '4hour', '6h': '6hour', '12h': '12hour', '1d': '1day', '1w': '1week',
+      };
+      const type = kuMap[timeframe] || '1hour';
+      const res = await fetchJsonWithMetrics<{ data?: string[][] }>(
+        'kucoin',
+        `https://api.kucoin.com/api/v1/market/candles?type=${type}&symbol=${encodeURIComponent(native)}`,
+        8000,
+      );
+      candles = (res.data ?? [])
+        .slice(0, limit)
+        .reverse()
+        .map((k) => {
+          const openTime = Number(k[0]) * 1000;
+          const closeTime = openTime + intervalMs - 1;
+          return {
+            openTime,
+            closeTime,
+            open: Number(k[1]),
+            close: Number(k[2]),
+            high: Number(k[3]),
+            low: Number(k[4]),
+            volume: Number(k[5]),
+            quoteVolume: Number(k[6]),
+            isClosed: closeTime < now,
+          };
+        });
+      source = 'KuCoin Public Candles';
+    } else if (exchange === 'gateio') {
+      const gateMap: Partial<Record<Timeframe, string>> = {
+        '1m': '1m', '5m': '5m', '15m': '15m', '30m': '30m', '1h': '1h', '4h': '4h', '1d': '1d', '1w': '7d',
+      };
+      const iv = gateMap[timeframe] || '1h';
+      if (marketType === 'perpetual') {
+        const rows = await fetchJsonWithMetrics<Record<string, unknown>[]>(
+          'gateio',
+          `https://api.gateio.ws/api/v4/futures/usdt/candlesticks?contract=${encodeURIComponent(native)}&interval=${iv}&limit=${Math.min(limit, 300)}`,
+          8000,
+        );
+        candles = (rows ?? []).map((k) => {
+          const openTime = Number(k.t) * 1000;
+          const closeTime = openTime + intervalMs - 1;
+          return {
+            openTime,
+            closeTime,
+            open: Number(k.o),
+            high: Number(k.h),
+            low: Number(k.l),
+            close: Number(k.c),
+            volume: Number(k.v) || 0,
+            quoteVolume: Number(k.sum) || 0,
+            isClosed: closeTime < now,
+          };
+        });
+      } else {
+        const rows = await fetchJsonWithMetrics<string[][]>(
+          'gateio',
+          `https://api.gateio.ws/api/v4/spot/candlesticks?currency_pair=${encodeURIComponent(native)}&interval=${iv}&limit=${Math.min(limit, 300)}`,
+          8000,
+        );
+        candles = (rows ?? []).map((k) => {
+          const openTime = Number(k[0]) * 1000;
+          const closeTime = openTime + intervalMs - 1;
+          return {
+            openTime,
+            closeTime,
+            quoteVolume: Number(k[1]),
+            close: Number(k[2]),
+            high: Number(k[3]),
+            low: Number(k[4]),
+            open: Number(k[5]),
+            volume: Number(k[6]),
+            isClosed: k[7] === 'true' || closeTime < now,
+          };
+        });
+      }
+      source = `Gate.io V4 Candlesticks (${marketType})`;
+    } else if (exchange === 'mexc') {
+      const mexcMap: Partial<Record<Timeframe, string>> = {
+        '1m': '1m', '5m': '5m', '15m': '15m', '30m': '30m', '1h': '60m', '4h': '4h', '1d': '1d', '1w': '1W',
+      };
+      const iv = mexcMap[timeframe] || '60m';
+      const raw = await fetchJsonWithMetrics<unknown[][]>(
+        'mexc',
+        `https://api.mexc.com/api/v3/klines?symbol=${encodeURIComponent(native)}&interval=${iv}&limit=${Math.min(limit, 500)}`,
+        8000,
+      );
+      candles = (raw ?? []).map((k) => {
+        const openTime = Number(k[0]);
+        const closeTime = Number(k[6]) || openTime + intervalMs - 1;
+        return {
+          openTime,
+          closeTime,
+          open: Number(k[1]),
+          high: Number(k[2]),
+          low: Number(k[3]),
+          close: Number(k[4]),
+          volume: Number(k[5]),
+          quoteVolume: Number(k[7]),
+          isClosed: closeTime < now,
+        };
+      });
+      source = 'MEXC V3 Klines';
+    } else if (exchange === 'bitget') {
+      const bgMap: Partial<Record<Timeframe, string>> = {
+        '1m': '1min', '3m': '3min', '5m': '5min', '15m': '15min', '30m': '30min',
+        '1h': '1h', '4h': '4h', '6h': '6h', '12h': '12h', '1d': '1day', '1w': '1week',
+      };
+      const gran = bgMap[timeframe] || '1h';
+      const url =
+        marketType === 'perpetual'
+          ? `https://api.bitget.com/api/v2/mix/market/candles?symbol=${encodeURIComponent(native)}&productType=USDT-FUTURES&granularity=${gran}&limit=${Math.min(limit, 200)}`
+          : `https://api.bitget.com/api/v2/spot/market/candles?symbol=${encodeURIComponent(native)}&granularity=${gran}&limit=${Math.min(limit, 200)}`;
+      const res = await fetchJsonWithMetrics<{ data?: string[][] }>('bitget', url, 8000);
+      candles = (res.data ?? []).map((k) => {
+        const openTime = Number(k[0]);
+        const closeTime = openTime + intervalMs - 1;
+        return {
+          openTime,
+          closeTime,
+          open: Number(k[1]),
+          high: Number(k[2]),
+          low: Number(k[3]),
+          close: Number(k[4]),
+          volume: Number(k[5]),
+          quoteVolume: Number(k[6]) || Number(k[7]),
+          isClosed: closeTime < now,
+        };
+      });
+      source = `Bitget V2 Candles (${marketType})`;
+    } else if (exchange === 'htx') {
+      const htxMap: Partial<Record<Timeframe, string>> = {
+        '1m': '1min', '5m': '5min', '15m': '15min', '30m': '30min', '1h': '60min', '4h': '4hour', '1d': '1day', '1w': '1week',
+      };
+      const period = htxMap[timeframe] || '60min';
+      const res = await fetchJsonWithMetrics<{ data?: Record<string, number>[] }>(
+        'htx',
+        `https://api.huobi.pro/market/history/kline?symbol=${encodeURIComponent(native)}&period=${period}&size=${Math.min(limit, 300)}`,
+        8000,
+      );
+      candles = (res.data ?? [])
+        .slice()
+        .reverse()
+        .map((k) => {
+          const openTime = Number(k.id) * 1000;
+          const closeTime = openTime + intervalMs - 1;
+          return {
+            openTime,
+            closeTime,
+            open: Number(k.open),
+            high: Number(k.high),
+            low: Number(k.low),
+            close: Number(k.close),
+            volume: Number(k.amount) || 0,
+            quoteVolume: Number(k.vol) || 0,
+            isClosed: closeTime < now,
+          };
+        });
+      source = 'HTX Public Klines';
+    } else if (exchange === 'cryptocom') {
+      const cdcMap: Partial<Record<Timeframe, string>> = {
+        '1m': '1m', '5m': '5m', '15m': '15m', '30m': '30m', '1h': '1h', '4h': '4h', '6h': '6h', '12h': '12h', '1d': '1D', '1w': '7D',
+      };
+      const tf = cdcMap[timeframe] || '1h';
+      const res = await fetchJsonWithMetrics<{ result?: { data?: Record<string, string | number>[] } }>(
+        'cryptocom',
+        `https://api.crypto.com/exchange/v1/public/get-candlestick?instrument_name=${encodeURIComponent(native)}&timeframe=${tf}&count=${Math.min(limit, 300)}`,
+        8000,
+      );
+      candles = (res.result?.data ?? []).map((k) => {
+        const openTime = Number(k.t);
+        const closeTime = openTime + intervalMs - 1;
+        return {
+          openTime,
+          closeTime,
+          open: Number(k.o),
+          high: Number(k.h),
+          low: Number(k.l),
+          close: Number(k.c),
+          volume: Number(k.v) || 0,
+          isClosed: closeTime < now,
+        };
+      });
+      source = 'Crypto.com Public Candles';
+    } else if (exchange === 'hyperliquid') {
+      const hlInterval = timeframe === '6h' ? '4h' : timeframe;
+      const startTime = now - intervalMs * Math.min(limit, 300);
+      const t0 = Date.now();
+      const stat = providerHealth.hyperliquid;
+      stat.requestCount += 1;
+      const res = await fetch('https://api.hyperliquid.xyz/info', {
+        method: 'POST',
+        signal: AbortSignal.timeout(8000),
+        headers: { 'Content-Type': 'application/json', 'User-Agent': 'SIGLENS/1.0' },
+        body: JSON.stringify({
+          type: 'candleSnapshot',
+          req: { coin: native, interval: hlInterval, startTime, endTime: now },
+        }),
+      });
+      if (!res.ok) throw new Error(`Hyperliquid candle HTTP ${res.status}`);
+      const rows = (await res.json()) as Record<string, string | number>[];
+      stat.latencyMs = Date.now() - t0;
+      stat.lastRestSuccessAt = Date.now();
+      stat.status = 'LIVE';
+      stat.lastError = null;
+      candles = (rows ?? []).slice(-limit).map((k) => {
+        const openTime = Number(k.t);
+        const closeTime = Number(k.T) || openTime + intervalMs - 1;
+        return {
+          openTime,
+          closeTime,
+          open: Number(k.o),
+          high: Number(k.h),
+          low: Number(k.l),
+          close: Number(k.c),
+          volume: Number(k.v) || 0,
+          isClosed: closeTime < now,
+        };
+      });
+      source = 'Hyperliquid Perpetual Candles';
     } else if (exchange === 'kraken') {
       const iv = KRAKEN_INTERVAL_MAP[timeframe];
       if (!iv) throw new Error(`Timeframe ${timeframe} is not natively supported by Kraken REST API.`);
@@ -1011,6 +1854,83 @@ export async function fetchOrderBook(
     rawBids = (res.result?.b ?? []).map((b) => [Number(b[0]), Number(b[1])]);
     rawAsks = (res.result?.a ?? []).map((a) => [Number(a[0]), Number(a[1])]);
     source = `Bybit V5 Orderbook (${cat})`;
+  } else if (exchange === 'okx') {
+    const instId = marketType === 'perpetual' ? `${native}-SWAP` : native;
+    const res = await fetchJsonWithMetrics<{ data?: { bids?: string[][]; asks?: string[][] }[] }>(
+      'okx',
+      `https://www.okx.com/api/v5/market/books?instId=${encodeURIComponent(instId)}&sz=${Math.min(depthLimit, 40)}`,
+    );
+    const top = res.data?.[0];
+    rawBids = (top?.bids ?? []).map((b) => [Number(b[0]), Number(b[1])]);
+    rawAsks = (top?.asks ?? []).map((a) => [Number(a[0]), Number(a[1])]);
+    source = `OKX V5 Orderbook (${marketType})`;
+  } else if (exchange === 'kucoin') {
+    const res = await fetchJsonWithMetrics<{ data?: { bids?: string[][]; asks?: string[][] } }>(
+      'kucoin',
+      `https://api.kucoin.com/api/v1/market/orderbook/level2_20?symbol=${encodeURIComponent(native)}`,
+    );
+    rawBids = (res.data?.bids ?? []).map((b) => [Number(b[0]), Number(b[1])]);
+    rawAsks = (res.data?.asks ?? []).map((a) => [Number(a[0]), Number(a[1])]);
+    source = 'KuCoin Level 2 Book';
+  } else if (exchange === 'gateio') {
+    const url =
+      marketType === 'perpetual'
+        ? `https://api.gateio.ws/api/v4/futures/usdt/order_book?contract=${encodeURIComponent(native)}&limit=${depthLimit}`
+        : `https://api.gateio.ws/api/v4/spot/order_book?currency_pair=${encodeURIComponent(native)}&limit=${depthLimit}`;
+    const res = await fetchJsonWithMetrics<{ bids?: unknown[]; asks?: unknown[] }>('gateio', url);
+    rawBids = (res.bids ?? []).map((b) =>
+      Array.isArray(b) ? [Number(b[0]), Number(b[1])] : [Number((b as Record<string, unknown>).p), Number((b as Record<string, unknown>).s)],
+    );
+    rawAsks = (res.asks ?? []).map((a) =>
+      Array.isArray(a) ? [Number(a[0]), Number(a[1])] : [Number((a as Record<string, unknown>).p), Number((a as Record<string, unknown>).s)],
+    );
+    source = `Gate.io V4 Orderbook (${marketType})`;
+  } else if (exchange === 'mexc') {
+    const res = await fetchJsonWithMetrics<{ bids?: string[][]; asks?: string[][] }>(
+      'mexc',
+      `https://api.mexc.com/api/v3/depth?symbol=${encodeURIComponent(native)}&limit=${depthLimit}`,
+    );
+    rawBids = (res.bids ?? []).map((b) => [Number(b[0]), Number(b[1])]);
+    rawAsks = (res.asks ?? []).map((a) => [Number(a[0]), Number(a[1])]);
+    source = 'MEXC V3 Depth';
+  } else if (exchange === 'bitget') {
+    const url =
+      marketType === 'perpetual'
+        ? `https://api.bitget.com/api/v2/mix/market/merge-depth?symbol=${encodeURIComponent(native)}&productType=USDT-FUTURES&limit=${Math.min(depthLimit, 20)}`
+        : `https://api.bitget.com/api/v2/spot/market/orderbook?symbol=${encodeURIComponent(native)}&limit=${Math.min(depthLimit, 20)}`;
+    const res = await fetchJsonWithMetrics<{ data?: { bids?: string[][]; asks?: string[][] } }>('bitget', url);
+    rawBids = (res.data?.bids ?? []).map((b) => [Number(b[0]), Number(b[1])]);
+    rawAsks = (res.data?.asks ?? []).map((a) => [Number(a[0]), Number(a[1])]);
+    source = `Bitget V2 Orderbook (${marketType})`;
+  } else if (exchange === 'htx') {
+    const res = await fetchJsonWithMetrics<{ tick?: { bids?: number[][]; asks?: number[][] } }>(
+      'htx',
+      `https://api.huobi.pro/market/depth?symbol=${encodeURIComponent(native)}&type=step0&depth=20`,
+    );
+    rawBids = (res.tick?.bids ?? []).slice(0, depthLimit).map((b) => [Number(b[0]), Number(b[1])]);
+    rawAsks = (res.tick?.asks ?? []).slice(0, depthLimit).map((a) => [Number(a[0]), Number(a[1])]);
+    source = 'HTX Public Depth';
+  } else if (exchange === 'cryptocom') {
+    const res = await fetchJsonWithMetrics<{ result?: { data?: { bids?: string[][]; asks?: string[][] }[] } }>(
+      'cryptocom',
+      `https://api.crypto.com/exchange/v1/public/get-book?instrument_name=${encodeURIComponent(native)}&depth=20`,
+    );
+    const top = res.result?.data?.[0];
+    rawBids = (top?.bids ?? []).map((b) => [Number(b[0]), Number(b[1])]);
+    rawAsks = (top?.asks ?? []).map((a) => [Number(a[0]), Number(a[1])]);
+    source = 'Crypto.com Level 2 Book';
+  } else if (exchange === 'hyperliquid') {
+    const res = await fetch('https://api.hyperliquid.xyz/info', {
+      method: 'POST',
+      signal: AbortSignal.timeout(7000),
+      headers: { 'Content-Type': 'application/json', 'User-Agent': 'SIGLENS/1.0' },
+      body: JSON.stringify({ type: 'l2Book', coin: native }),
+    });
+    if (!res.ok) throw new Error(`Hyperliquid book HTTP ${res.status}`);
+    const data = (await res.json()) as { levels?: { px: string; sz: string }[][] };
+    rawBids = (data.levels?.[0] ?? []).slice(0, depthLimit).map((b) => [Number(b.px), Number(b.sz)]);
+    rawAsks = (data.levels?.[1] ?? []).slice(0, depthLimit).map((a) => [Number(a.px), Number(a.sz)]);
+    source = 'Hyperliquid L2 Orderbook';
   } else if (exchange === 'kraken') {
     const res = await fetchJsonWithMetrics<{ result?: Record<string, { bids: string[][]; asks: string[][] }> }>(
       'kraken',

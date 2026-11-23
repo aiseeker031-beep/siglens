@@ -96,8 +96,39 @@ import {
 const PORT = Number(process.env.PORT || 3000);
 const IS_PROD = process.env.NODE_ENV === 'production';
 
-const exchangeSchema = z.enum(['binance', 'bybit', 'kraken', 'coinbase', 'stocks', 'cfds']);
-const exchangeOrAllSchema = z.enum(['binance', 'bybit', 'kraken', 'coinbase', 'stocks', 'cfds', 'all']);
+const exchangeSchema = z.enum([
+  'binance',
+  'bybit',
+  'okx',
+  'kucoin',
+  'gateio',
+  'mexc',
+  'bitget',
+  'htx',
+  'cryptocom',
+  'hyperliquid',
+  'kraken',
+  'coinbase',
+  'stocks',
+  'cfds',
+]);
+const exchangeOrAllSchema = z.enum([
+  'binance',
+  'bybit',
+  'okx',
+  'kucoin',
+  'gateio',
+  'mexc',
+  'bitget',
+  'htx',
+  'cryptocom',
+  'hyperliquid',
+  'kraken',
+  'coinbase',
+  'stocks',
+  'cfds',
+  'all',
+]);
 const marketTypeSchema = z.enum(['spot', 'perpetual', 'equity', 'cfd']);
 const marketTypeOrAllSchema = z.enum(['spot', 'perpetual', 'equity', 'cfd', 'all']);
 const timeframeSchema = z.enum(['1m', '3m', '5m', '15m', '30m', '1h', '2h', '4h', '6h', '12h', '1d', '1w']);

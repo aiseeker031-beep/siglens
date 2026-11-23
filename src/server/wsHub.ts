@@ -1,10 +1,10 @@
 import type { Server as HttpServer } from 'node:http';
 import { WebSocket, WebSocketServer } from 'ws';
-import { CORE_UNIVERSE_BASES, EXCHANGE_TIMEFRAMES } from '../shared/constants';
+import { ALL_EXCHANGES, CORE_UNIVERSE_BASES, EXCHANGE_TIMEFRAMES } from '../shared/constants';
 import type { Candle, ExchangeId, Timeframe } from '../shared/types';
 import { updateWsProviderHealth } from './providers';
 
-const VALID_EXCHANGES = new Set<ExchangeId>(['binance', 'bybit', 'kraken', 'coinbase', 'stocks', 'cfds']);
+const VALID_EXCHANGES = new Set<ExchangeId>(ALL_EXCHANGES);
 const VALID_BINANCE_TFS = new Set<Timeframe>(EXCHANGE_TIMEFRAMES.binance);
 const SAFE_BINANCE_SYMBOL_RE = /^[A-Z0-9]{4,18}$/;
 

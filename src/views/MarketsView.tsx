@@ -1,7 +1,7 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { ArrowUpDown, Search, Star } from 'lucide-react';
 import { api } from '../services/api';
-import { EXCHANGE_LABELS } from '../shared/constants';
+import { ALL_EXCHANGES, EXCHANGE_LABELS } from '../shared/constants';
 import { formatCompactUsd, formatPercent, formatPrice } from '../shared/format';
 import type { ExchangeId, MarketTicker, MarketType } from '../shared/types';
 import { useAppStore } from '../store/useAppStore';
@@ -113,7 +113,7 @@ export const MarketsView: React.FC = () => {
           className="px-2.5 py-1.5 rounded-lg border border-[#E6E8EE] bg-[#F2F4F7] text-xs"
         >
           <option value="all">All Exchanges</option>
-          {(['binance', 'bybit', 'kraken', 'coinbase', 'stocks', 'cfds'] as ExchangeId[]).map((ex) => (
+          {ALL_EXCHANGES.map((ex) => (
             <option key={ex} value={ex}>
               {EXCHANGE_LABELS[ex]}
             </option>
