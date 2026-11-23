@@ -902,3 +902,159 @@ export interface AuthStateResponse {
   callbackUrl: string;
   user: AuthUser | null;
 }
+
+// =========================================================================
+// LIVE MARKET INTELLIGENCE (MACRO EVENTS, NEWS CATALYSTS, SOCIAL SENTIMENT)
+// & 4-PILLAR QUANT ALPHA SIGNALS
+// =========================================================================
+
+export type MacroEventImpact = 'HIGH' | 'MEDIUM' | 'LOW';
+export type MacroEventStatus = 'ONGOING' | 'UPCOMING' | 'RECENT';
+
+export interface MacroCalendarEvent {
+  id: string;
+  title: string;
+  country: string;
+  impact: MacroEventImpact;
+  timestamp: number; // ms UTC
+  status: MacroEventStatus;
+  forecast: string | null;
+  previous: string | null;
+  minutesFromNow: number;
+}
+
+export type CatalystCategory =
+  | 'ETF'
+  | 'MACRO'
+  | 'REGULATORY'
+  | 'SECURITY'
+  | 'UPGRADE'
+  | 'LISTING'
+  | 'GENERAL';
+
+export interface MarketNewsItem {
+  id: string;
+  title: string;
+  source: string;
+  url: string;
+  publishedAt: number; // ms UTC
+  sentiment: 'BULLISH' | 'BEARISH' | 'NEUTRAL';
+  sentimentScore: number; // -100 .. +100
+  assets: string[]; // e.g. ['BTC', 'ETH']
+  catalystType: CatalystCategory;
+}
+
+export interface TrendingSocialCoin {
+  symbol: string;
+  name: string;
+  rank: number;
+  priceChange24hPct: number | null;
+}
+
+export interface MarketIntelligenceSnapshot {
+  updatedAt: number;
+  fearAndGreed: {
+    value: number | null;
+    classification: string;
+    delta7d: number | null;
+    contrarianBias: 'EXTREME_FEAR_LONG_BIAS' | 'EXTREME_GREED_SHORT_BIAS' | 'NEUTRAL';
+  };
+  newsSentimentScore: number; // -100 .. +100
+  socialBuzzScore: number; // -100 .. +100
+  overallSentimentScore: number; // -100 .. +100
+  sentimentLabel: 'STRONGLY_BULLISH' | 'BULLISH' | 'NEUTRAL' | 'BEARISH' | 'STRONGLY_BEARISH';
+  eventRiskLevel: 'LOW' | 'ELEVATED' | 'HIGH';
+  eventRiskSummary: string;
+  upcomingEvents: MacroCalendarEvent[];
+  newsCatalysts: MarketNewsItem[];
+  trendingCoins: TrendingSocialCoin[];
+  derivativesBias: {
+    avgFundingPct: number | null;
+    crowdedSide: 'CROWDED_LONGS' | 'CROWDED_SHORTS' | 'BALANCED' | 'UNAVAILABLE';
+  };
+  perAssetFundingPct: Record<string, number>;
+  activeSources: string[];
+  unavailableSources: string[];
+}
+
+export interface QuantHistoricalEdge {
+  sampleTrades: number;
+  wins: number;
+  losses: number;
+  winRatePct: number | null;
+  expectancyR: number | null;
+  profitFactor: number | null;
+  avgWinR: number | null;
+  avgLossR: number | null;
+  passed: boolean;
+  note: string;
+}
+
+export type QuantSignalGrade = 'A+' | 'A' | 'B' | 'C' | 'BLOCKED';
+
+export interface QuantSignalRow {
+  canonicalId: string;
+  exchange: ExchangeId;
+  marketType: MarketType;
+  displaySymbol: string;
+  baseAsset: string;
+  timeframe: Timeframe;
+  htfTimeframe: Timeframe | null;
+  price: number;
+  change24hPct: number;
+  volume24hUsd: number;
+  grade: QuantSignalGrade;
+  alphaScore: number; // 0 .. 100
+  action: 'BUY' | 'SELL' | 'WAIT';
+  rawDirection: 'BUY' | 'SELL' | 'NEUTRAL';
+  pillars: {
+    technicalScore: number; // 0 .. 100
+    htfScore: number; // 0 .. 100
+    historicalScore: number; // 0 .. 100
+    sentimentScore: number; // 0 .. 100
+  };
+  technicalSummary: {
+    directionalScore: number; // -100 .. +100
+    agreementPct: number;
+    adx14: number | null;
+    rsi14: number | null;
+    atrPct: number | null;
+    rvol20: number | null;
+    trendRegime: string;
+  };
+  htfBias: 'BULLISH' | 'BEARISH' | 'NEUTRAL';
+  htfAligned: boolean;
+  historicalEdge: QuantHistoricalEdge;
+  assetSentiment: {
+    score: number; // -100 .. +100
+    label: 'BULLISH' | 'BEARISH' | 'NEUTRAL';
+    trendingRank: number | null;
+    fundingPct: number | null;
+    headlinesCount: number;
+    shockWarning: string | null;
+  };
+  antiChase: {
+    distanceAtrFromEma20: number | null;
+    overextended: boolean;
+    entryMode: 'NOW' | 'PULLBACK_ZONE';
+  };
+  gatesPassed: string[];
+  rejectionReasons: string[];
+  setup: SignalSetupPlan;
+  keySummary: string;
+  scannedAt: number;
+}
+
+export interface QuantSignalsPayload {
+  exchange: ExchangeId;
+  marketType: MarketType;
+  timeframe: Timeframe;
+  htfTimeframe: Timeframe | null;
+  signals: QuantSignalRow[];
+  actionableCount: number;
+  blockedCount: number;
+  scannedUniverseCount: number;
+  intelligence: MarketIntelligenceSnapshot;
+  scannedAt: number;
+  methodologyNote: string;
+}

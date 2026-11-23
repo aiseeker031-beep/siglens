@@ -58,6 +58,8 @@ import {
   parseCanonicalId,
 } from './src/server/providers';
 import { runScreenerScan, startBackgroundScanner } from './src/server/scanner';
+import { getMarketIntelligence } from './src/server/marketIntel';
+import { runQuantSignalScan } from './src/server/quantSignals';
 import {
   buildPaperArenaSnapshot,
   closePaperPosition,
@@ -418,6 +420,61 @@ export function buildApiRouter(): express.Router {
       });
     } catch (err) {
       res.status(502).json({ error: err instanceof Error ? err.message : 'Signal calculation failed' });
+    }
+  });
+
+  // --- Live Market Intelligence (Macro Calendar, News Catalysts, Social & Funding Sentiment) ---
+  router.get('/intel/overview', async (req, res) => {
+    const forceRefresh = req.query.refresh === 'true' || req.query.refresh === '1';
+    try {
+      const snapshot = await getMarketIntelligence(forceRefresh);
+      res.json(snapshot);
+    } catch (err) {
+      res.status(502).json({
+        error: err instanceof Error ? err.message : 'Market intelligence fetch failed',
+      });
+    }
+  });
+
+  // --- 4-Pillar Multi-Factor Quant Alpha Signals ---
+  const quantQuerySchema = z.object({
+    exchange: exchangeSchema.default('binance'),
+    marketType: marketTypeSchema.optional(),
+    timeframe: timeframeSchema.default('15m'),
+    refresh: z.string().optional(),
+  });
+
+  router.get('/signals/quant', async (req, res) => {
+    const parsed = quantQuerySchema.safeParse(req.query);
+    if (!parsed.success) {
+      return res.status(400).json({ error: 'Invalid quant signal parameters', details: parsed.error.issues });
+    }
+    const { exchange, timeframe, refresh } = parsed.data;
+    const allowedMarkets = EXCHANGE_MARKET_TYPES[exchange];
+    const marketType: MarketType =
+      parsed.data.marketType && allowedMarkets.includes(parsed.data.marketType)
+        ? parsed.data.marketType
+        : defaultMarketTypeFor(exchange);
+
+    const supportedTfs = EXCHANGE_TIMEFRAMES[exchange];
+    const resolvedTf: Timeframe = supportedTfs.includes(timeframe)
+      ? timeframe
+      : supportedTfs.includes('15m')
+        ? '15m'
+        : supportedTfs[0];
+
+    try {
+      const payload = await runQuantSignalScan(
+        exchange,
+        marketType,
+        resolvedTf,
+        refresh === 'true' || refresh === '1',
+      );
+      res.json(payload);
+    } catch (err) {
+      res.status(502).json({
+        error: err instanceof Error ? err.message : 'Quant signal scan failed',
+      });
     }
   });
 

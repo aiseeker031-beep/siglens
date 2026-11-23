@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import type { Candle } from '../shared/types';
+import type { Candle, MarketIntelligenceSnapshot } from '../shared/types';
 import {
   calculateADX,
   calculateATR,
@@ -20,6 +20,8 @@ import { detectCandlestickPatterns, detectSupportResistance } from './patterns';
 import { computePearsonCorrelation } from './correlation';
 import { parseNaturalLanguageToScreenerFilters } from './screenerRules';
 import { computeSignalSetup, formatSignalCopyText } from './signalSetup';
+import { getAssetSentimentContext, scoreHeadlineSentiment } from '../server/marketIntel';
+import { evaluateQuantAsset, simulateHistoricalEdge } from '../server/quantSignals';
 
 function generateSyntheticSeries(
   count: number,
@@ -421,3 +423,157 @@ test('Structured Signal Setup: BUY, SELL, WAIT ordering, S/R anchoring, and 5-bu
   assert.ok(copyText.includes('TP1:') && copyText.includes('TP2:') && copyText.includes('TP3:'));
 });
 
+
+test('17. News NLP scorer & shock shield detect exploit/ETF catalysts accurately', () => {
+  const hack = scoreHeadlineSentiment('Solana protocol exploited in $45M breach, funds drained');
+  assert.equal(hack.sentiment, 'BEARISH');
+  assert.equal(hack.catalystType, 'SECURITY');
+  assert.ok(hack.assets.includes('SOL'));
+  assert.ok(hack.score <= -30);
+
+  const etf = scoreHeadlineSentiment('Bitcoin spot ETF records massive institutional net inflows as BTC rallies');
+  assert.equal(etf.sentiment, 'BULLISH');
+  assert.equal(etf.catalystType, 'ETF');
+  assert.ok(etf.assets.includes('BTC'));
+  assert.ok(etf.score >= 30);
+
+  const intel: MarketIntelligenceSnapshot = {
+    updatedAt: Date.now(),
+    fearAndGreed: { value: 52, classification: 'Neutral', delta7d: 2, contrarianBias: 'NEUTRAL' },
+    newsSentimentScore: 10,
+    socialBuzzScore: 8,
+    overallSentimentScore: 9,
+    sentimentLabel: 'NEUTRAL',
+    eventRiskLevel: 'LOW',
+    eventRiskSummary: 'Clear',
+    upcomingEvents: [],
+    newsCatalysts: [
+      {
+        id: 'sec-1',
+        title: 'Solana bridge hacked and drained for $45M',
+        source: 'CoinDesk',
+        url: 'https://example.com',
+        publishedAt: Date.now() - 30 * 60_000,
+        sentiment: 'BEARISH',
+        sentimentScore: -42,
+        assets: ['SOL'],
+        catalystType: 'SECURITY',
+      },
+    ],
+    trendingCoins: [{ symbol: 'BTC', name: 'Bitcoin', rank: 1, priceChange24hPct: 4.5 }],
+    derivativesBias: { avgFundingPct: 0.005, crowdedSide: 'BALANCED' },
+    perAssetFundingPct: { BTC: 0.005, SOL: -0.01 },
+    activeSources: ['UnitTest'],
+    unavailableSources: [],
+  };
+
+  const solCtx = getAssetSentimentContext('SOL', intel);
+  assert.equal(solCtx.blocksLong, true);
+  assert.ok(solCtx.shockWarning && solCtx.shockWarning.includes('SECURITY'));
+
+  const btcCtx = getAssetSentimentContext('BTC', intel);
+  assert.equal(btcCtx.blocksLong, false);
+  assert.equal(btcCtx.trendingRank, 1);
+});
+
+test('18. 4-Pillar Quant Alpha Engine enforces HTF alignment, chop filter, walk-forward edge, and shock shield', () => {
+  const uptrend = generateSyntheticSeries(220, 'uptrend');
+  const htfUptrend = generateSyntheticSeries(110, 'uptrend', 14_400_000);
+  const htfDowntrend = generateSyntheticSeries(110, 'downtrend', 14_400_000);
+  const sideways = generateSyntheticSeries(220, 'sideways');
+
+  const calmIntel: MarketIntelligenceSnapshot = {
+    updatedAt: Date.now(),
+    fearAndGreed: { value: 55, classification: 'Greed', delta7d: 5, contrarianBias: 'NEUTRAL' },
+    newsSentimentScore: 22,
+    socialBuzzScore: 18,
+    overallSentimentScore: 20,
+    sentimentLabel: 'BULLISH',
+    eventRiskLevel: 'LOW',
+    eventRiskSummary: 'No high-impact macro event within 24h.',
+    upcomingEvents: [],
+    newsCatalysts: [],
+    trendingCoins: [{ symbol: 'BTC', name: 'Bitcoin', rank: 1, priceChange24hPct: 3.8 }],
+    derivativesBias: { avgFundingPct: 0.006, crowdedSide: 'BALANCED' },
+    perAssetFundingPct: { BTC: 0.006 },
+    activeSources: ['UnitTest'],
+    unavailableSources: [],
+  };
+
+  const histBuy = simulateHistoricalEdge(uptrend, 'BUY');
+  assert.equal(histBuy.passed, true);
+
+  const aligned = evaluateQuantAsset({
+    canonicalId: 'binance:spot:BTC/USDT',
+    exchange: 'binance',
+    marketType: 'spot',
+    displaySymbol: 'BTC/USDT',
+    baseAsset: 'BTC',
+    timeframe: '15m',
+    htfTimeframe: '4h',
+    price: uptrend[uptrend.length - 1].close,
+    change24hPct: 3.5,
+    volume24hUsd: 1_500_000_000,
+    candles: uptrend,
+    htfCandles: htfUptrend,
+    intel: calmIntel,
+  });
+  assert.equal(aligned.action, 'BUY');
+  assert.ok(['A+', 'A', 'B'].includes(aligned.grade));
+  assert.equal(aligned.htfAligned, true);
+  assert.equal(aligned.setup.takeProfits.length, 3);
+  assert.ok(aligned.setup.takeProfits[0].rrRatio >= 1.4);
+
+  const choppy = evaluateQuantAsset({
+    canonicalId: 'binance:spot:ETH/USDT',
+    exchange: 'binance',
+    marketType: 'spot',
+    displaySymbol: 'ETH/USDT',
+    baseAsset: 'ETH',
+    timeframe: '15m',
+    htfTimeframe: '4h',
+    price: sideways[sideways.length - 1].close,
+    change24hPct: 0.1,
+    volume24hUsd: 800_000_000,
+    candles: sideways,
+    htfCandles: htfUptrend,
+    intel: calmIntel,
+  });
+  assert.equal(choppy.action, 'WAIT');
+  assert.ok(choppy.rejectionReasons.length > 0);
+
+  const shockIntel: MarketIntelligenceSnapshot = {
+    ...calmIntel,
+    newsCatalysts: [
+      {
+        id: 'btc-shock',
+        title: 'Major Bitcoin exchange hacked and drained in massive security exploit',
+        source: 'CoinDesk',
+        url: 'https://example.com',
+        publishedAt: Date.now() - 20 * 60_000,
+        sentiment: 'BEARISH',
+        sentimentScore: -42,
+        assets: ['BTC'],
+        catalystType: 'SECURITY',
+      },
+    ],
+  };
+  const shockBlocked = evaluateQuantAsset({
+    canonicalId: 'binance:spot:BTC/USDT',
+    exchange: 'binance',
+    marketType: 'spot',
+    displaySymbol: 'BTC/USDT',
+    baseAsset: 'BTC',
+    timeframe: '15m',
+    htfTimeframe: '4h',
+    price: uptrend[uptrend.length - 1].close,
+    change24hPct: 3.5,
+    volume24hUsd: 1_500_000_000,
+    candles: uptrend,
+    htfCandles: htfDowntrend,
+    intel: shockIntel,
+  });
+  assert.equal(shockBlocked.action, 'WAIT');
+  assert.equal(shockBlocked.grade, 'BLOCKED');
+  assert.ok(shockBlocked.rejectionReasons.some((r) => r.includes('Shock catalyst')));
+});

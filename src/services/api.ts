@@ -11,6 +11,7 @@ import type {
   DualSignalResponse,
   ExchangeId,
   MarketOverviewPayload,
+  MarketIntelligenceSnapshot,
   MarketTicker,
   MarketType,
   MultiTimeframeSummary,
@@ -22,6 +23,7 @@ import type {
   PaperSide,
   PaperStrategyBot,
   ProviderStatus,
+  QuantSignalsPayload,
   ScreenerPreset,
   ScreenerRow,
   SignalEventRecord,
@@ -104,6 +106,19 @@ export const api = {
 
   getSignalFeed: (limit = 120) =>
     apiJson<{ events: SignalEventRecord[]; count: number }>(`/api/signals/feed?limit=${limit}`),
+
+  getMarketIntelligence: (refresh = false) =>
+    apiJson<MarketIntelligenceSnapshot>(`/api/intel/overview?refresh=${refresh}`),
+
+  getQuantSignals: (
+    exchange: ExchangeId,
+    marketType: MarketType,
+    timeframe: Timeframe,
+    refresh = false,
+  ) =>
+    apiJson<QuantSignalsPayload>(
+      `/api/signals/quant?exchange=${exchange}&marketType=${marketType}&timeframe=${timeframe}&refresh=${refresh}`,
+    ),
 
   getScreener: (
     exchange: ExchangeId,
