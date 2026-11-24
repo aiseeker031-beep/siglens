@@ -21,7 +21,13 @@ import { computePearsonCorrelation } from './correlation';
 import { parseNaturalLanguageToScreenerFilters } from './screenerRules';
 import { computeSignalSetup, formatSignalCopyText } from './signalSetup';
 import { getAssetSentimentContext, scoreHeadlineSentiment } from '../server/marketIntel';
-import { evaluateQuantAsset, simulateHistoricalEdge } from '../server/quantSignals';
+import {
+  evaluateQuantAsset,
+  inferAssetCategory,
+  reconcileStaticLockedSignal,
+  simulateHistoricalEdge,
+} from '../server/quantSignals';
+import { getDb } from '../server/db';
 
 function generateSyntheticSeries(
   count: number,
@@ -576,4 +582,100 @@ test('18. 4-Pillar Quant Alpha Engine enforces HTF alignment, chop filter, walk-
   assert.equal(shockBlocked.action, 'WAIT');
   assert.equal(shockBlocked.grade, 'BLOCKED');
   assert.ok(shockBlocked.rejectionReasons.some((r) => r.includes('Shock catalyst')));
+});
+
+test('19. Static Locked Signals persist Entry/SL/TP without repainting on market price shift and support Commodities/Stocks/Crypto', () => {
+  assert.equal(inferAssetCategory('cfds', 'XAU'), 'commodities');
+  assert.equal(inferAssetCategory('stocks', 'NVDA'), 'stocks');
+  assert.equal(inferAssetCategory('binance', 'BTC'), 'crypto');
+
+  const uptrend = generateSyntheticSeries(220, 'uptrend');
+  const htfUptrend = generateSyntheticSeries(110, 'uptrend', 14_400_000);
+  const calmIntel: MarketIntelligenceSnapshot = {
+    updatedAt: Date.now(),
+    fearAndGreed: { value: 55, classification: 'Greed', delta7d: 5, contrarianBias: 'NEUTRAL' },
+    newsSentimentScore: 22,
+    socialBuzzScore: 18,
+    overallSentimentScore: 20,
+    sentimentLabel: 'BULLISH',
+    eventRiskLevel: 'LOW',
+    eventRiskSummary: 'Clear',
+    upcomingEvents: [],
+    newsCatalysts: [],
+    trendingCoins: [],
+    derivativesBias: { avgFundingPct: 0.005, crowdedSide: 'BALANCED' },
+    perAssetFundingPct: {},
+    activeSources: ['UnitTest'],
+    unavailableSources: [],
+  };
+
+  const testCanonical = 'cfds:cfd:XAU_TEST/USD';
+  const db = getDb();
+  try {
+    const baseEval = evaluateQuantAsset({
+      canonicalId: testCanonical,
+      assetClass: 'commodities',
+      exchange: 'cfds',
+      marketType: 'cfd',
+      displaySymbol: 'XAU_TEST/USD',
+      baseAsset: 'XAU',
+      timeframe: '1h',
+      htfTimeframe: '4h',
+      price: uptrend[uptrend.length - 1].close,
+      change24hPct: 1.4,
+      volume24hUsd: 500_000_000,
+      candles: uptrend,
+      htfCandles: htfUptrend,
+      intel: calmIntel,
+    });
+    assert.equal(baseEval.action, 'BUY');
+    assert.equal(baseEval.assetClass, 'commodities');
+
+    const t0 = Date.now();
+    // 1. Lock the signal into SQLite
+    const locked = reconcileStaticLockedSignal({
+      candidate: baseEval,
+      livePrice: uptrend[uptrend.length - 1].close,
+      completedCandles: uptrend,
+      nowMs: t0,
+    });
+    assert.ok(locked.lockState?.isLocked);
+    assert.equal(locked.lockState?.status, 'ACTIVE');
+    const frozenEntry = locked.lockState!.lockedEntryPrice;
+    const frozenSl = locked.setup.stopLoss!;
+    const frozenTp1 = locked.setup.takeProfits[0].price;
+
+    // 2. Market shifts slightly & a noisy new candidate tries to flip to SELL/WAIT -> MUST remain STATIC BUY with identical Entry/SL/TP!
+    const noisyFlip: typeof baseEval = {
+      ...baseEval,
+      action: 'SELL',
+      grade: 'A',
+      setup: { ...baseEval.setup, direction: 'SELL', entryPrice: frozenEntry * 1.003 },
+    };
+    const shiftedPrice = frozenEntry + (frozenTp1 - frozenEntry) * 0.35;
+    const stillStatic = reconcileStaticLockedSignal({
+      candidate: noisyFlip,
+      livePrice: shiftedPrice,
+      completedCandles: uptrend,
+      nowMs: t0 + 5 * 60_000,
+    });
+    assert.equal(stillStatic.action, 'BUY', 'Locked signal must NOT flip direction on market shift');
+    assert.equal(stillStatic.lockState?.lockedEntryPrice, frozenEntry, 'Locked Entry must remain static');
+    assert.equal(stillStatic.setup.stopLoss, frozenSl, 'Locked SL must remain static');
+    assert.equal(stillStatic.setup.takeProfits[0].price, frozenTp1, 'Locked TP1 must remain static');
+    assert.equal(stillStatic.lockState?.status, 'ACTIVE');
+
+    // 3. Price reaches TP1 -> status transitions cleanly to TP1_HIT without repainting levels
+    const tp1Reached = reconcileStaticLockedSignal({
+      candidate: noisyFlip,
+      livePrice: frozenTp1 * 1.001,
+      completedCandles: uptrend,
+      nowMs: t0 + 15 * 60_000,
+    });
+    assert.equal(tp1Reached.lockState?.status, 'TP1_HIT');
+    assert.ok(tp1Reached.lockState?.tp1HitAt !== null);
+    assert.equal(tp1Reached.lockState?.lockedEntryPrice, frozenEntry);
+  } finally {
+    db.prepare('DELETE FROM locked_quant_signals WHERE canonical_id = ?').run(testCanonical);
+  }
 });

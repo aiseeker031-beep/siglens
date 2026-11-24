@@ -482,8 +482,9 @@ export function buildApiRouter(): express.Router {
     }
   });
 
-  // --- 4-Pillar Multi-Factor Quant Alpha Signals ---
+  // --- 4-Pillar Multi-Factor Quant Alpha Signals (Static Locked: Crypto, US Stocks, Commodities) ---
   const quantQuerySchema = z.object({
+    assetClass: z.enum(['all', 'crypto', 'stocks', 'commodities']).default('all'),
     exchange: exchangeSchema.default('binance'),
     marketType: marketTypeSchema.optional(),
     timeframe: timeframeSchema.default('15m'),
@@ -495,7 +496,7 @@ export function buildApiRouter(): express.Router {
     if (!parsed.success) {
       return res.status(400).json({ error: 'Invalid quant signal parameters', details: parsed.error.issues });
     }
-    const { exchange, timeframe, refresh } = parsed.data;
+    const { assetClass, exchange, timeframe, refresh } = parsed.data;
     const allowedMarkets = EXCHANGE_MARKET_TYPES[exchange];
     const marketType: MarketType =
       parsed.data.marketType && allowedMarkets.includes(parsed.data.marketType)
@@ -515,6 +516,7 @@ export function buildApiRouter(): express.Router {
         marketType,
         resolvedTf,
         refresh === 'true' || refresh === '1',
+        assetClass,
       );
       res.json(payload);
     } catch (err) {

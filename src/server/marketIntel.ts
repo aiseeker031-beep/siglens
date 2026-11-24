@@ -28,6 +28,10 @@ const RSS_FEEDS: { name: string; url: string }[] = [
     name: 'Yahoo Finance',
     url: 'https://feeds.finance.yahoo.com/rss/2.0/headline?s=BTC-USD,ETH-USD,SOL-USD,SPY,NVDA&region=US&lang=en-US',
   },
+  {
+    name: 'Yahoo Commodities & Equities',
+    url: 'https://feeds.finance.yahoo.com/rss/2.0/headline?s=GC=F,SI=F,CL=F,NG=F,HG=F,AAPL,MSFT,TSLA,AMZN,META&region=US&lang=en-US',
+  },
 ];
 
 // Asset name/ticker aliases for deterministic headline attribution
@@ -63,9 +67,23 @@ const ASSET_ALIASES: { symbol: string; patterns: RegExp[] }[] = [
   { symbol: 'AAPL', patterns: [/\bapple\b/i, /\baapl\b/i] },
   { symbol: 'TSLA', patterns: [/\btesla\b/i, /\btsla\b/i] },
   { symbol: 'MSFT', patterns: [/\bmicrosoft\b/i, /\bmsft\b/i] },
+  { symbol: 'AMZN', patterns: [/\bamazon\b/i, /\bamzn\b/i] },
+  { symbol: 'GOOGL', patterns: [/\balphabet\b/i, /\bgoogle\b/i, /\bgoogl\b/i] },
+  { symbol: 'META', patterns: [/\bmeta platforms\b/i, /\bfacebook\b/i, /\bmeta\b/i] },
+  { symbol: 'AMD', patterns: [/\bamd\b/i, /\badvanced micro devices\b/i] },
+  { symbol: 'PLTR', patterns: [/\bpalantir\b/i, /\bpltr\b/i] },
+  { symbol: 'SPY', patterns: [/\bs&p 500\b/i, /\bspy\b/i] },
+  { symbol: 'QQQ', patterns: [/\bnasdaq\b/i, /\bqqq\b/i] },
   { symbol: 'COIN', patterns: [/\bcoinbase\b/i] },
   { symbol: 'MSTR', patterns: [/\bmicrostrategy\b/i, /\bstrategy\b/i, /\bmstr\b/i] },
-  { symbol: 'XAU', patterns: [/\bgold\b/i, /\bxau\b/i] },
+  { symbol: 'XAU', patterns: [/\bgold\b/i, /\bxau\b/i, /\bbullion\b/i] },
+  { symbol: 'XAG', patterns: [/\bsilver\b/i, /\bxag\b/i] },
+  { symbol: 'WTI', patterns: [/\bcrude oil\b/i, /\bwti\b/i, /\boil prices?\b/i, /\bopec\b/i] },
+  { symbol: 'BRENT', patterns: [/\bbrent\b/i, /\bcrude oil\b/i, /\bopec\b/i] },
+  { symbol: 'NATGAS', patterns: [/\bnatural gas\b/i, /\blng\b/i, /\bnatgas\b/i] },
+  { symbol: 'COPPER', patterns: [/\bcopper\b/i] },
+  { symbol: 'XPT', patterns: [/\bplatinum\b/i] },
+  { symbol: 'XPD', patterns: [/\bpalladium\b/i] },
 ];
 
 const BULLISH_TERMS: { re: RegExp; weight: number }[] = [

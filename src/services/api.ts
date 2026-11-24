@@ -26,6 +26,7 @@ import type {
   QuantSignalsPayload,
   ScreenerPreset,
   ScreenerRow,
+  SignalAssetClass,
   SignalEventRecord,
   Timeframe,
   UserPreferences,
@@ -115,9 +116,10 @@ export const api = {
     marketType: MarketType,
     timeframe: Timeframe,
     refresh = false,
+    assetClass: SignalAssetClass = 'all',
   ) =>
     apiJson<QuantSignalsPayload>(
-      `/api/signals/quant?exchange=${exchange}&marketType=${marketType}&timeframe=${timeframe}&refresh=${refresh}`,
+      `/api/signals/quant?assetClass=${assetClass}&exchange=${exchange}&marketType=${marketType}&timeframe=${timeframe}&refresh=${refresh}`,
     ),
 
   getScreener: (

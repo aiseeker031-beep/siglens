@@ -991,9 +991,38 @@ export interface QuantHistoricalEdge {
 }
 
 export type QuantSignalGrade = 'A+' | 'A' | 'B' | 'C' | 'BLOCKED';
+export type SignalAssetClass = 'all' | 'crypto' | 'stocks' | 'commodities';
+export type QuantAssetCategory = 'crypto' | 'stocks' | 'commodities';
+export type LockedSignalStatus =
+  | 'ACTIVE'
+  | 'TP1_HIT'
+  | 'TP2_HIT'
+  | 'TP3_HIT'
+  | 'TP1_SECURED'
+  | 'SL_HIT'
+  | 'EXPIRED';
+
+export interface LockedSignalState {
+  lockId: string;
+  isLocked: boolean;
+  status: LockedSignalStatus;
+  lockedAt: number;
+  expiresAt: number;
+  candleOpenTime: number;
+  lockedEntryPrice: number;
+  livePnlPct: number | null;
+  tp1HitAt: number | null;
+  tp2HitAt: number | null;
+  tp3HitAt: number | null;
+  slHitAt: number | null;
+  closedAt: number | null;
+  closedPrice: number | null;
+  realizedPct: number | null;
+}
 
 export interface QuantSignalRow {
   canonicalId: string;
+  assetClass: QuantAssetCategory;
   exchange: ExchangeId;
   marketType: MarketType;
   displaySymbol: string;
@@ -1041,19 +1070,29 @@ export interface QuantSignalRow {
   gatesPassed: string[];
   rejectionReasons: string[];
   setup: SignalSetupPlan;
+  lockState: LockedSignalState | null;
   keySummary: string;
   scannedAt: number;
 }
 
 export interface QuantSignalsPayload {
+  assetClass: SignalAssetClass;
   exchange: ExchangeId;
   marketType: MarketType;
   timeframe: Timeframe;
   htfTimeframe: Timeframe | null;
   signals: QuantSignalRow[];
+  resolvedSignals: QuantSignalRow[];
   actionableCount: number;
   blockedCount: number;
   scannedUniverseCount: number;
+  trackRecord: {
+    activeLockedCount: number;
+    resolvedCount: number;
+    winsCount: number;
+    lossesCount: number;
+    winRatePct: number | null;
+  };
   intelligence: MarketIntelligenceSnapshot;
   scannedAt: number;
   methodologyNote: string;
