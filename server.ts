@@ -1,3 +1,4 @@
+import fs from 'node:fs';
 import http from 'node:http';
 import path from 'node:path';
 import express from 'express';
@@ -97,6 +98,17 @@ import {
 
 const PORT = Number(process.env.PORT || 3000);
 const IS_PROD = process.env.NODE_ENV === 'production';
+
+function shouldEnforceGoogleAuth(): boolean {
+  if (process.env.SIGLENS_REQUIRE_AUTH === 'true') return true;
+  return process.env.NODE_ENV === 'production' && isGoogleOAuthConfigured();
+}
+
+function resolveLandingHtmlPath(): string {
+  const distLanding = path.resolve(process.cwd(), 'dist', 'landing.html');
+  if (fs.existsSync(distLanding)) return distLanding;
+  return path.resolve(process.cwd(), 'public', 'landing.html');
+}
 
 const exchangeSchema = z.enum([
   'binance',
@@ -206,6 +218,40 @@ export function buildApiRouter(): express.Router {
       } catch {
         return res.status(403).json({ error: 'Invalid Origin header.' });
       }
+    }
+    return next();
+  });
+
+  // Strict Google OAuth session gate for all app API endpoints when auth is enforced
+  router.use((req, res, next) => {
+    if (!shouldEnforceGoogleAuth()) return next();
+    const p = req.path;
+    if (
+      p === '/health' ||
+      p === '/auth/me' ||
+      p === '/auth/google' ||
+      p === '/auth/google/callback' ||
+      p === '/auth/logout'
+    ) {
+      return next();
+    }
+    if (p === '/paper/tick' && process.env.CRON_SECRET) {
+      const headerSecret = String(req.headers['x-cron-secret'] || '');
+      const authHeader = String(req.headers.authorization || '');
+      if (
+        headerSecret === process.env.CRON_SECRET ||
+        authHeader === `Bearer ${process.env.CRON_SECRET}`
+      ) {
+        return next();
+      }
+    }
+    const user = getSessionUserFromReq(req);
+    if (!user) {
+      return res.status(401).json({
+        error: 'Authentication required. Please sign in with Google to use SigLens.',
+        authRequired: true,
+        loginUrl: '/api/auth/google',
+      });
     }
     return next();
   });
@@ -1619,19 +1665,32 @@ export function createApp(): express.Express {
     if (isSecureRequest(req)) {
       res.setHeader('Strict-Transport-Security', 'max-age=31536000; includeSubDomains');
     }
+    const isLandingPage = req.path === '/' || req.path === '/landing.html';
     res.setHeader(
       'Content-Security-Policy',
-      [
-        "default-src 'self'",
-        "script-src 'self'",
-        "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com",
-        "font-src 'self' https://fonts.gstatic.com data:",
-        "img-src 'self' data: https://lh3.googleusercontent.com",
-        "connect-src 'self' ws: wss:",
-        "frame-ancestors 'none'",
-        "base-uri 'self'",
-        "form-action 'self' https://accounts.google.com",
-      ].join('; '),
+      isLandingPage
+        ? [
+            "default-src 'self'",
+            "script-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net",
+            "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com",
+            "font-src 'self' https://fonts.gstatic.com data:",
+            "img-src 'self' data: https://images.pexels.com https://cdn.jsdelivr.net https://lh3.googleusercontent.com",
+            "connect-src 'self' https://api.coingecko.com",
+            "frame-ancestors 'none'",
+            "base-uri 'self'",
+            "form-action 'self' https://accounts.google.com",
+          ].join('; ')
+        : [
+            "default-src 'self'",
+            "script-src 'self'",
+            "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com",
+            "font-src 'self' https://fonts.gstatic.com data:",
+            "img-src 'self' data: https://lh3.googleusercontent.com",
+            "connect-src 'self' ws: wss:",
+            "frame-ancestors 'none'",
+            "base-uri 'self'",
+            "form-action 'self' https://accounts.google.com",
+          ].join('; '),
     );
     next();
   });
@@ -1647,6 +1706,25 @@ export function createApp(): express.Express {
   });
 
   app.use('/api', buildApiRouter());
+
+  // Public SigLens landing page at /
+  app.get('/', (_req, res) => {
+    res.setHeader('Cache-Control', 'no-cache');
+    res.sendFile(resolveLandingHtmlPath());
+  });
+
+  // Prevent direct static bypass of the /app auth gate via /index.html
+  app.get('/index.html', (_req, res) => {
+    return res.redirect(302, '/app');
+  });
+
+  // Strict server-side Google login gate for /app and all sub-routes
+  app.get(['/app', '/app/*'], (req, res, next) => {
+    if (shouldEnforceGoogleAuth() && !getSessionUserFromReq(req)) {
+      return res.redirect(302, '/?auth_required=1');
+    }
+    return next();
+  });
 
   // Final error fallback (never expose stack traces in production)
   app.use((err: unknown, _req: express.Request, res: express.Response, _next: express.NextFunction) => {
@@ -1687,9 +1765,15 @@ async function bootstrap() {
         maxAge: '1h',
       }),
     );
-    app.get('*', (_req, res) => {
+    app.get(['/app', '/app/*'], (req, res) => {
+      if (shouldEnforceGoogleAuth() && !getSessionUserFromReq(req)) {
+        return res.redirect(302, '/?auth_required=1');
+      }
       res.setHeader('Cache-Control', 'no-cache');
-      res.sendFile(path.join(distDir, 'index.html'));
+      return res.sendFile(path.join(distDir, 'index.html'));
+    });
+    app.get('*', (_req, res) => {
+      return res.redirect(302, '/');
     });
   }
 

@@ -311,3 +311,49 @@ test('API & Security: headers, JSON 404, malformed JSON 400, validation, SSRF, C
   }
 });
 
+
+test('Landing Page & Strict Google Auth Gate: serves new landing page at /, blocks /app and /api/* when unauthenticated', async () => {
+  const { createApp } = await import('../../server');
+  const prevReqAuth = process.env.SIGLENS_REQUIRE_AUTH;
+  process.env.SIGLENS_REQUIRE_AUTH = 'true';
+
+  const app = createApp();
+  const server = http.createServer(app);
+  await new Promise<void>((resolve) => server.listen(0, '127.0.0.1', () => resolve()));
+  const { port } = server.address() as AddressInfo;
+  const base = `http://127.0.0.1:${port}`;
+
+  try {
+    // 1. Public landing page at / renders new SigLens HTML with Continue with Google CTA
+    const landingRes = await fetch(`${base}/`);
+    assert.equal(landingRes.status, 200);
+    const html = await landingRes.text();
+    assert.ok(html.includes('See Beyond'), 'Landing page should render new SigLens hero');
+    assert.ok(html.includes('Continue with Google'), 'Landing page should include Continue with Google CTA');
+    assert.ok(html.includes('/api/auth/google'), 'Landing page CTA must point to /api/auth/google');
+
+    // 2. Unauthenticated GET /app redirects to /?auth_required=1
+    const appRes = await fetch(`${base}/app`, { redirect: 'manual' });
+    assert.equal(appRes.status, 302);
+    assert.equal(appRes.headers.get('location'), '/?auth_required=1');
+
+    // 3. Direct /index.html cannot bypass /app auth gate
+    const idxRes = await fetch(`${base}/index.html`, { redirect: 'manual' });
+    assert.equal(idxRes.status, 302);
+    assert.equal(idxRes.headers.get('location'), '/app');
+
+    // 4. Unauthenticated app API call is blocked with 401
+    const marketsRes = await fetch(`${base}/api/markets?exchange=binance&marketType=spot`);
+    assert.equal(marketsRes.status, 401);
+    const mJson = (await marketsRes.json()) as { authRequired?: boolean };
+    assert.equal(mJson.authRequired, true);
+
+    // 5. Public auth & health routes remain accessible
+    assert.equal((await fetch(`${base}/api/health`)).status, 200);
+    assert.equal((await fetch(`${base}/api/auth/me`)).status, 200);
+  } finally {
+    if (prevReqAuth === undefined) delete process.env.SIGLENS_REQUIRE_AUTH;
+    else process.env.SIGLENS_REQUIRE_AUTH = prevReqAuth;
+    await new Promise<void>((resolve) => server.close(() => resolve()));
+  }
+});

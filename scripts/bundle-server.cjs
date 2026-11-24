@@ -65,6 +65,11 @@ try {
     throw new Error('dist/index.html missing — run "npm run build" before bundling.');
   }
   fs.copyFileSync(path.join(distDir, 'index.html'), path.join(deployDir, 'dist', 'index.html'));
+  if (fs.existsSync(path.join(distDir, 'landing.html'))) {
+    fs.copyFileSync(path.join(distDir, 'landing.html'), path.join(deployDir, 'dist', 'landing.html'));
+  } else if (fs.existsSync(path.join(rootDir, 'public', 'landing.html'))) {
+    fs.copyFileSync(path.join(rootDir, 'public', 'landing.html'), path.join(deployDir, 'dist', 'landing.html'));
+  }
   if (fs.existsSync(path.join(distDir, 'favicon.ico'))) {
     fs.copyFileSync(path.join(distDir, 'favicon.ico'), path.join(deployDir, 'dist', 'favicon.ico'));
   }

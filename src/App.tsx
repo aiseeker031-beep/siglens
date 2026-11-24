@@ -5,10 +5,7 @@ import { CommandSearchModal } from './components/layout/CommandSearchModal';
 import { KINETIC_EASE } from './components/ui/Kinetic';
 import { SkeletonBlock } from './components/ui/SignalMeter';
 import { useMarketStream } from './hooks/useMarketStream';
-import type { ExchangeId, MarketType, NavSection } from './shared/types';
 import { useAppStore } from './store/useAppStore';
-
-import { LandingPage } from './views/LandingPage';
 
 const OverviewView = lazy(() =>
   import('./views/OverviewView').then((m) => ({ default: m.OverviewView })),
@@ -37,30 +34,6 @@ const SettingsView = lazy(() =>
 const HeatmapsView = lazy(() =>
   import('./views/HeatmapsView').then((m) => ({ default: m.HeatmapsView })),
 );
-
-type RouteMode = 'landing' | 'app';
-
-function readRouteModeFromLocation(): RouteMode {
-  if (typeof window === 'undefined') return 'landing';
-  return window.location.pathname.startsWith('/app') ? 'app' : 'landing';
-}
-
-function readAuthErrorFromLocation(): string | null {
-  if (typeof window === 'undefined') return null;
-  const params = new URLSearchParams(window.location.search);
-  const code = params.get('auth_error');
-  if (!code) return null;
-  if (code === 'google_not_configured') {
-    return 'Google OAuth credentials (GOOGLE_CLIENT_ID & GOOGLE_CLIENT_SECRET) are not configured on the server yet. Click "Continue with Google" to view the 2-step cPanel setup guide.';
-  }
-  if (code === 'invalid_state') {
-    return 'Google sign-in session expired or state mismatch. Please try signing in again.';
-  }
-  if (code === 'oauth_exchange_failed') {
-    return 'Google sign-in token exchange failed. Verify your Authorized Redirect URI in Google Cloud Console.';
-  }
-  return `Google sign-in returned: ${code}`;
-}
 
 class ViewErrorBoundary extends React.Component<
   { children: React.ReactNode; resetKey: string },
@@ -110,15 +83,12 @@ const ViewSuspenseFallback: React.FC = () => (
   </div>
 );
 
-export function App() {
+const AuthenticatedWorkspace: React.FC<{ onNavigateLanding: () => void }> = ({
+  onNavigateLanding,
+}) => {
   const activeSection = useAppStore((s) => s.activeSection);
-  const setActiveSection = useAppStore((s) => s.setActiveSection);
-  const selectMarket = useAppStore((s) => s.selectMarket);
   const hydrateFromServer = useAppStore((s) => s.hydrateFromServer);
   const setCommandSearchOpen = useAppStore((s) => s.setCommandSearchOpen);
-
-  const [routeMode, setRouteMode] = useState<RouteMode>(() => readRouteModeFromLocation());
-  const [authNotice, setAuthNotice] = useState<string | null>(() => readAuthErrorFromLocation());
 
   useMarketStream();
 
@@ -127,16 +97,7 @@ export function App() {
   }, [hydrateFromServer]);
 
   useEffect(() => {
-    const onPopState = () => {
-      setRouteMode(readRouteModeFromLocation());
-    };
-    window.addEventListener('popstate', onPopState);
-    return () => window.removeEventListener('popstate', onPopState);
-  }, []);
-
-  useEffect(() => {
     const onKeyDown = (e: KeyboardEvent) => {
-      if (routeMode !== 'app') return;
       if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === 'k') {
         e.preventDefault();
         const cur = useAppStore.getState().commandSearchOpen;
@@ -145,44 +106,7 @@ export function App() {
     };
     window.addEventListener('keydown', onKeyDown);
     return () => window.removeEventListener('keydown', onKeyDown);
-  }, [routeMode, setCommandSearchOpen]);
-
-  const navigateToApp = useCallback(
-    (section?: NavSection) => {
-      if (section) {
-        setActiveSection(section);
-      }
-      if (typeof window !== 'undefined' && !window.location.pathname.startsWith('/app')) {
-        window.history.pushState({}, '', '/app');
-      }
-      setRouteMode('app');
-      window.scrollTo({ top: 0, behavior: 'instant' as ScrollBehavior });
-    },
-    [setActiveSection],
-  );
-
-  const navigateToLanding = useCallback(() => {
-    if (typeof window !== 'undefined' && window.location.pathname !== '/') {
-      window.history.pushState({}, '', '/');
-    }
-    setRouteMode('landing');
-    window.scrollTo({ top: 0, behavior: 'instant' as ScrollBehavior });
-  }, []);
-
-  const handleInspectFromLanding = useCallback(
-    (exchange: ExchangeId, marketType: MarketType, symbol: string) => {
-      selectMarket(exchange, marketType, symbol, true);
-      navigateToApp('overview');
-    },
-    [selectMarket, navigateToApp],
-  );
-
-  const dismissAuthNotice = useCallback(() => {
-    setAuthNotice(null);
-    if (typeof window !== 'undefined' && window.location.search.includes('auth_error')) {
-      window.history.replaceState({}, '', window.location.pathname);
-    }
-  }, []);
+  }, [setCommandSearchOpen]);
 
   const renderSection = () => {
     switch (activeSection) {
@@ -210,34 +134,129 @@ export function App() {
   };
 
   return (
+    <AppShell onNavigateLanding={onNavigateLanding}>
+      <ViewErrorBoundary resetKey={activeSection}>
+        <AnimatePresence mode="wait">
+          <motion.div
+            key={activeSection}
+            initial={{ opacity: 0, y: 8 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -6 }}
+            transition={{ duration: 0.2, ease: KINETIC_EASE }}
+          >
+            <Suspense fallback={<ViewSuspenseFallback />}>{renderSection()}</Suspense>
+          </motion.div>
+        </AnimatePresence>
+      </ViewErrorBoundary>
+      <CommandSearchModal />
+    </AppShell>
+  );
+};
+
+export function App() {
+  const auth = useAppStore((s) => s.auth);
+  const fetchAuthState = useAppStore((s) => s.fetchAuthState);
+  const [authChecked, setAuthChecked] = useState(false);
+
+  useEffect(() => {
+    let active = true;
+    fetchAuthState().finally(() => {
+      if (active) setAuthChecked(true);
+    });
+    return () => {
+      active = false;
+    };
+  }, [fetchAuthState]);
+
+  // Enforce strict Google login gate client-side as well as server-side
+  useEffect(() => {
+    if (authChecked && !auth?.user && typeof window !== 'undefined') {
+      window.location.replace('/?auth_required=1');
+    }
+  }, [authChecked, auth]);
+
+  const navigateToLanding = useCallback(() => {
+    if (typeof window !== 'undefined') {
+      window.location.href = '/';
+    }
+  }, []);
+
+  if (!authChecked) {
+    return (
+      <div className="min-h-screen bg-[#080A0B] text-[#F4F6F3] flex items-center justify-center p-6">
+        <div className="flex flex-col items-center gap-4 text-center">
+          <div className="w-10 h-10 rounded-xl bg-[#C6FF3D] flex items-center justify-center animate-pulse">
+            <svg viewBox="0 0 32 32" className="w-6 h-6" aria-hidden="true">
+              <circle cx="15" cy="15" r="7" fill="none" stroke="#080A0B" strokeWidth="2.4" />
+              <path d="M20.5 20.5 26 26" stroke="#080A0B" strokeWidth="2.6" strokeLinecap="round" />
+              <path
+                d="M11 17l3-3 2 2 3-4"
+                fill="none"
+                stroke="#080A0B"
+                strokeWidth="1.8"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+              />
+            </svg>
+          </div>
+          <div className="text-sm font-semibold tracking-tight">Verifying Google Session…</div>
+          <div className="text-xs text-[#929A95] font-mono">SigLens Terminal Access Gate</div>
+        </div>
+      </div>
+    );
+  }
+
+  if (!auth?.user) {
+    return (
+      <div className="min-h-screen bg-[#080A0B] text-[#F4F6F3] flex items-center justify-center p-6">
+        <div className="max-w-md w-full rounded-3xl border border-[#252B27] bg-[#111513] p-8 text-center space-y-5 shadow-2xl">
+          <div className="inline-flex items-center justify-center w-12 h-12 rounded-2xl bg-[#C6FF3D]">
+            <svg viewBox="0 0 32 32" className="w-7 h-7" aria-hidden="true">
+              <circle cx="15" cy="15" r="7" fill="none" stroke="#080A0B" strokeWidth="2.4" />
+              <path d="M20.5 20.5 26 26" stroke="#080A0B" strokeWidth="2.6" strokeLinecap="round" />
+              <path
+                d="M11 17l3-3 2 2 3-4"
+                fill="none"
+                stroke="#080A0B"
+                strokeWidth="1.8"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+              />
+            </svg>
+          </div>
+          <div className="space-y-1.5">
+            <h1 className="text-2xl font-bold tracking-tight">Sign in to SigLens</h1>
+            <p className="text-xs text-[#929A95] leading-relaxed">
+              Access to the live SigLens terminal, multi-exchange markets, quant signals, and demo trading requires a verified Google account.
+            </p>
+          </div>
+          <a
+            href="/api/auth/google"
+            className="w-full inline-flex items-center justify-center gap-2.5 px-5 py-3 rounded-full bg-[#C6FF3D] hover:brightness-105 text-[#080A0B] font-semibold text-sm transition-all"
+          >
+            <span className="inline-flex items-center justify-center w-5 h-5 rounded-full bg-white">
+              <svg viewBox="0 0 24 24" className="w-3.5 h-3.5" aria-hidden="true">
+                <path fill="#4285F4" d="M23.745 12.27c0-.79-.07-1.54-.19-2.27h-11.3v4.51h6.47c-.29 1.48-1.14 2.73-2.4 3.58v3h3.86c2.26-2.09 3.56-5.17 3.56-8.82z" />
+                <path fill="#34A853" d="M12.255 24c3.24 0 5.95-1.08 7.93-2.91l-3.86-3c-1.08.72-2.45 1.16-4.07 1.16-3.13 0-5.78-2.11-6.73-4.96h-3.98v3.09C3.515 21.3 7.565 24 12.255 24z" />
+                <path fill="#FBBC05" d="M5.525 14.29c-.25-.72-.38-1.49-.38-2.29s.14-1.57.38-2.29V6.62h-3.98a11.86 11.86 0 000 10.76l3.98-3.09z" />
+                <path fill="#EA4335" d="M12.255 4.75c1.77 0 3.35.61 4.6 1.8l3.42-3.42C18.205 1.19 15.495 0 12.255 0c-4.69 0-8.74 2.7-10.71 6.62l3.98 3.09c.95-2.85 3.6-4.96 6.73-4.96z" />
+              </svg>
+            </span>
+            <span>Continue with Google</span>
+          </a>
+          <div>
+            <a href="/" className="text-xs text-[#929A95] hover:text-[#C6FF3D] transition-colors">
+              ← Return to SigLens Landing Page
+            </a>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  return (
     <MotionConfig reducedMotion="user">
-      {routeMode === 'landing' ? (
-        <LandingPage
-          onLaunchApp={navigateToApp}
-          onInspectAsset={handleInspectFromLanding}
-          authNotice={authNotice}
-          onDismissAuthNotice={dismissAuthNotice}
-        />
-      ) : (
-        <AppShell onNavigateLanding={navigateToLanding}>
-          <ViewErrorBoundary resetKey={activeSection}>
-            <AnimatePresence mode="wait">
-              <motion.div
-                key={activeSection}
-                initial={{ opacity: 0, y: 8 }}
-                animate={{ opacity: 1, y: 0 }}
-                exit={{ opacity: 0, y: -6 }}
-                transition={{ duration: 0.2, ease: KINETIC_EASE }}
-              >
-                <Suspense fallback={<ViewSuspenseFallback />}>
-                  {renderSection()}
-                </Suspense>
-              </motion.div>
-            </AnimatePresence>
-          </ViewErrorBoundary>
-          <CommandSearchModal />
-        </AppShell>
-      )}
+      <AuthenticatedWorkspace onNavigateLanding={navigateToLanding} />
     </MotionConfig>
   );
 }

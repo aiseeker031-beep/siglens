@@ -156,6 +156,7 @@ export const GoogleAuthButton: React.FC<{
                   onClick={async () => {
                     setMenuOpen(false);
                     await logoutAuth();
+                    window.location.href = '/';
                   }}
                   className="w-full flex items-center gap-2 px-3 py-2 rounded-xl text-xs font-semibold text-[#BE123C] hover:bg-[#FFF1F2] transition-colors"
                 >

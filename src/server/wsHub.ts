@@ -1,7 +1,9 @@
-import type { Server as HttpServer } from 'node:http';
+import type { IncomingMessage, Server as HttpServer } from 'node:http';
+import type express from 'express';
 import { WebSocket, WebSocketServer } from 'ws';
 import { ALL_EXCHANGES, CORE_UNIVERSE_BASES, EXCHANGE_TIMEFRAMES } from '../shared/constants';
 import type { Candle, ExchangeId, Timeframe } from '../shared/types';
+import { getSessionUserFromReq, isGoogleOAuthConfigured } from './auth';
 import { updateWsProviderHealth } from './providers';
 
 const VALID_EXCHANGES = new Set<ExchangeId>(ALL_EXCHANGES);
@@ -41,7 +43,15 @@ export class MarketWebSocketHub {
       maxPayload: 16 * 1024, // 16 KB guard against oversized WS frames
     });
 
-    this.wss.on('connection', (ws) => {
+    this.wss.on('connection', (ws, req: IncomingMessage) => {
+      const requireAuth =
+        process.env.SIGLENS_REQUIRE_AUTH === 'true' ||
+        (process.env.NODE_ENV === 'production' && isGoogleOAuthConfigured());
+      if (requireAuth && !getSessionUserFromReq(req as unknown as express.Request)) {
+        ws.close(4401, 'Google sign-in required');
+        return;
+      }
+
       const sub: ClientSub = {
         ws,
         symbol: 'BTCUSDT',
