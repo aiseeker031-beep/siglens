@@ -1370,17 +1370,34 @@ async function scanSingleCategory(params: {
     .sort((a, b) => b.quoteVolume24h - a.quoteVolume24h)
     .slice(0, params.maxPairs);
 
-  const rows = await mapWithConcurrency(universe, 5, async (ticker) => {
-    const [activeRes, htfRes] = await Promise.all([
-      fetchCandles(params.exchange, params.marketType, ticker.displaySymbol, tf, 220),
-      htfTimeframe
-        ? fetchCandles(params.exchange, params.marketType, ticker.displaySymbol, htfTimeframe, 100).catch(
-            () => null,
-          )
-        : Promise.resolve(null),
-    ]);
+  const isYahoo = params.exchange === 'stocks' || params.exchange === 'cfds';
+  const concurrency = isYahoo ? 2 : 3;
 
-    if (!activeRes.candles || activeRes.candles.length < 40) return null;
+  const fetchCandlesSafe = async (
+    sym: string,
+    targetTf: Timeframe,
+    limit: number,
+  ): Promise<{ candles: Candle[] } | null> => {
+    for (let attempt = 0; attempt < 2; attempt++) {
+      try {
+        const res = await fetchCandles(params.exchange, params.marketType, sym, targetTf, limit);
+        if (res.candles && res.candles.length > 0) return res;
+      } catch {
+        if (attempt === 0) {
+          await new Promise((r) => setTimeout(r, isYahoo ? 350 : 200));
+        }
+      }
+    }
+    return null;
+  };
+
+  const rows = await mapWithConcurrency(universe, concurrency, async (ticker) => {
+    const activeRes = await fetchCandlesSafe(ticker.displaySymbol, tf, 220);
+    if (!activeRes || activeRes.candles.length < 40) return null;
+
+    const htfRes = htfTimeframe
+      ? await fetchCandlesSafe(ticker.displaySymbol, htfTimeframe, 100)
+      : null;
 
     const validated = validateCandles(activeRes.candles, tf);
     const candidate = evaluateQuantAsset({
@@ -1454,7 +1471,8 @@ export async function runQuantSignalScan(
     let htfTimeframe: Timeframe | null = resolveHigherTimeframe(effectiveExchange, timeframe);
 
     if (assetClass === 'all') {
-      const [cryptoRes, stocksRes, commRes] = await Promise.all([
+      // Run Crypto in parallel with Yahoo (Commodities then US Stocks sequentially to avoid Yahoo 429 bursts)
+      const [cryptoRes, tradRes] = await Promise.all([
         scanSingleCategory({
           category: 'crypto',
           exchange: effectiveExchange,
@@ -1463,27 +1481,31 @@ export async function runQuantSignalScan(
           maxPairs: 12,
           intel,
         }),
-        scanSingleCategory({
-          category: 'stocks',
-          exchange: 'stocks',
-          marketType: 'equity',
-          timeframe,
-          maxPairs: 12,
-          intel,
-        }),
-        scanSingleCategory({
-          category: 'commodities',
-          exchange: 'cfds',
-          marketType: 'cfd',
-          timeframe,
-          maxPairs: 8,
-          intel,
-        }),
+        (async () => {
+          const commRes = await scanSingleCategory({
+            category: 'commodities',
+            exchange: 'cfds',
+            marketType: 'cfd',
+            timeframe,
+            maxPairs: 8,
+            intel,
+          });
+          const stocksRes = await scanSingleCategory({
+            category: 'stocks',
+            exchange: 'stocks',
+            marketType: 'equity',
+            timeframe,
+            maxPairs: 12,
+            intel,
+          });
+          return { commRes, stocksRes };
+        })(),
       ]);
-      allRows = [...cryptoRes.rows, ...stocksRes.rows, ...commRes.rows];
+      const { commRes, stocksRes } = tradRes;
+      allRows = [...cryptoRes.rows, ...commRes.rows, ...stocksRes.rows];
       scannedUniverseCount =
-        cryptoRes.universeCount + stocksRes.universeCount + commRes.universeCount;
-      htfTimeframe = cryptoRes.htfTimeframe ?? stocksRes.htfTimeframe ?? commRes.htfTimeframe;
+        cryptoRes.universeCount + commRes.universeCount + stocksRes.universeCount;
+      htfTimeframe = cryptoRes.htfTimeframe ?? commRes.htfTimeframe ?? stocksRes.htfTimeframe;
     } else {
       const res = await scanSingleCategory({
         category: assetClass,
